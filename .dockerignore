@@ -1,0 +1,6 @@
+node_modules
+data
+config/secrets.json
+.git
+.env
+*.log

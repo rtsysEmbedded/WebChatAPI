@@ -1,0 +1,191 @@
+{
+  "app": {
+    "name": "WebChatAPI",
+    "defaultLanguage": "en",
+    "languages": [
+      "en",
+      "fa"
+    ],
+    "serverLogLanguage": "en"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3000,
+    "portEnv": "PORT",
+    "hostEnv": "HOST",
+    "trustedProxyHops": 1,
+    "sseKeepAliveSeconds": 15,
+    "maxJsonBodyBytes": 26214400,
+    "publicDir": "public",
+    "dataDir": "data",
+    "dataDirEnv": "WCA_DATA_DIR",
+    "vendorFiles": {
+      "/vendor/marked.js": "node_modules/marked/lib/marked.umd.js",
+      "/vendor/purify.js": "node_modules/dompurify/dist/purify.min.js",
+      "/vendor/highlight.js": "node_modules/@highlightjs/cdn-assets/highlight.min.js",
+      "/vendor/hljs-light.css": "node_modules/@highlightjs/cdn-assets/styles/github.min.css",
+      "/vendor/hljs-dark.css": "node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css"
+    },
+    "staticCacheSeconds": 3600,
+    "securityHeaders": {
+      "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+    },
+    "mimeTypes": {
+      ".html": "text/html; charset=utf-8",
+      ".js": "text/javascript; charset=utf-8",
+      ".css": "text/css; charset=utf-8",
+      ".json": "application/json; charset=utf-8",
+      ".svg": "image/svg+xml",
+      ".png": "image/png",
+      ".ico": "image/x-icon",
+      ".webmanifest": "application/manifest+json",
+      ".woff2": "font/woff2"
+    }
+  },
+  "auth": {
+    "enabled": true,
+    "pinMinLength": 4,
+    "pinMaxLength": 32,
+    "pinPattern": "^[0-9]+$",
+    "sessionCookieName": "wca_session",
+    "sessionTtlHours": 168,
+    "secureCookie": "auto",
+    "maxFailedAttemptsPerIp": 5,
+    "maxFailedAttemptsGlobal": 30,
+    "attemptWindowMinutes": 15,
+    "lockoutMinutes": 15,
+    "failedLoginDelayMs": 800,
+    "scrypt": {
+      "N": 16384,
+      "r": 8,
+      "p": 1,
+      "keyLength": 64,
+      "saltBytes": 16
+    }
+  },
+  "secrets": {
+    "file": "config/secrets.json",
+    "fileEnv": "WCA_SECRETS_FILE",
+    "env": {
+      "pin": "WCA_PIN",
+      "pinHash": "WCA_PIN_HASH",
+      "sessionSecret": "WCA_SESSION_SECRET"
+    },
+    "autoGenerateSessionSecret": true
+  },
+  "chat": {
+    "defaultTemperature": 0.7,
+    "temperatureMin": 0,
+    "temperatureMax": 2,
+    "temperatureStep": 0.1,
+    "defaultMaxTokens": null,
+    "defaultSystemPrompt": "",
+    "reasoningEfforts": [
+      "",
+      "low",
+      "medium",
+      "high"
+    ],
+    "titleMaxLength": 60,
+    "upstreamTimeoutSeconds": 3600,
+    "maxImageBytes": 5242880,
+    "maxImagesPerMessage": 4,
+    "allowedImageTypes": [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/gif"
+    ]
+  },
+  "ui": {
+    "defaultTheme": "system",
+    "pricePerTokens": 1000000,
+    "priceCurrencySymbol": "$",
+    "priceDecimals": 2,
+    "sendOnEnter": true,
+    "showModelDescriptions": true,
+    "maxModelResults": 1000
+  },
+  "providers": [
+    {
+      "id": "cleanapis",
+      "name": "Clean APIs",
+      "enabled": true,
+      "baseUrl": "https://cleanapis.com/v1",
+      "apiKeyEnv": "CLEANAPIS_API_KEY",
+      "modelsPath": "/models",
+      "chatPath": "/chat/completions",
+      "headers": {},
+      "extraBody": {},
+      "supportsReasoningEffort": false,
+      "minMaxTokens": 2048,
+      "modelsCacheMinutes": 60,
+      "modelFilter": {
+        "field": "type",
+        "allow": [
+          "chat"
+        ]
+      },
+      "modelFields": {
+        "id": "id",
+        "name": "name",
+        "description": "description",
+        "contextLength": "context_window",
+        "inputPrice": "pricing.input_per_1k",
+        "outputPrice": "pricing.output_per_1k",
+        "capabilities": "capabilities",
+        "inputModalities": null
+      },
+      "priceUnitTokens": 1000,
+      "visionCapability": "vision",
+      "reasoningFields": [
+        "reasoning_content",
+        "reasoning"
+      ],
+      "staticModels": []
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "enabled": true,
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyEnv": "OPENROUTER_API_KEY",
+      "modelsPath": "/models",
+      "chatPath": "/chat/completions",
+      "headers": {
+        "X-Title": "WebChatAPI"
+      },
+      "extraBody": {},
+      "supportsReasoningEffort": true,
+      "minMaxTokens": null,
+      "modelsCacheMinutes": 60,
+      "modelFilter": {
+        "field": "architecture.output_modalities",
+        "allow": [
+          "text"
+        ]
+      },
+      "modelFields": {
+        "id": "id",
+        "name": "name",
+        "description": "description",
+        "contextLength": "context_length",
+        "inputPrice": "pricing.prompt",
+        "outputPrice": "pricing.completion",
+        "capabilities": "supported_parameters",
+        "inputModalities": "architecture.input_modalities"
+      },
+      "priceUnitTokens": 1,
+      "visionCapability": null,
+      "reasoningFields": [
+        "reasoning",
+        "reasoning_content"
+      ],
+      "staticModels": []
+    }
+  ]
+}

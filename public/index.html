@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <title></title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/hljs-light.css" id="hljs-light">
+  <link rel="stylesheet" href="/vendor/hljs-dark.css" id="hljs-dark" disabled>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/vendor/marked.js" defer></script>
+  <script src="/vendor/purify.js" defer></script>
+  <script src="/vendor/highlight.js" defer></script>
+  <script src="/js/i18n.js" defer></script>
+  <script src="/js/api.js" defer></script>
+  <script src="/js/render.js" defer></script>
+  <script src="/js/models.js" defer></script>
+  <script src="/js/app.js" defer></script>
+</head>
+<body>
+  <!-- Boot / loading -->
+  <div id="boot" class="boot"><div class="spinner"></div></div>
+
+  <!-- Login -->
+  <section id="login-view" class="login" hidden>
+    <form id="login-form" class="login-card" autocomplete="off">
+      <img src="/icon.svg" alt="" class="login-logo" width="48" height="48">
+      <h1 class="app-name"></h1>
+      <p class="muted" data-i18n="login.subtitle"></p>
+      <input id="pin-input" type="password" inputmode="numeric" autocomplete="current-password"
+             class="pin-input" data-i18n-placeholder="login.placeholder" required>
+      <button type="submit" class="btn primary block" data-i18n="login.submit"></button>
+      <p id="login-error" class="error-text" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <!-- Main app -->
+  <div id="app-view" class="app" hidden>
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <button id="new-chat" class="btn block new-chat">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M12 5v14M5 12h14"/></svg>
+          <span data-i18n="sidebar.newChat"></span>
+        </button>
+        <input id="conv-search" type="search" class="input" data-i18n-placeholder="sidebar.search">
+      </div>
+      <nav id="conv-list" class="conv-list" aria-label=""></nav>
+      <div class="sidebar-bottom">
+        <label class="row gap">
+          <span class="muted small" data-i18n="sidebar.theme"></span>
+          <select id="theme-select" class="input small">
+            <option value="system" data-i18n="theme.system"></option>
+            <option value="light" data-i18n="theme.light"></option>
+            <option value="dark" data-i18n="theme.dark"></option>
+          </select>
+        </label>
+        <label class="row gap">
+          <span class="muted small" data-i18n="sidebar.language"></span>
+          <select id="lang-select" class="input small"></select>
+        </label>
+        <button id="logout" class="btn ghost block" data-i18n="sidebar.logout"></button>
+      </div>
+    </aside>
+    <div id="scrim" class="scrim"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="toggle-sidebar" class="icon-btn" data-i18n-title="topbar.toggleSidebar">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button id="model-button" class="model-button">
+          <span id="model-button-label"></span>
+          <svg viewBox="0 0 24 24" class="icon small"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <span class="spacer"></span>
+        <button id="settings-button" class="icon-btn" data-i18n-title="topbar.chatSettings">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        </button>
+      </header>
+
+      <div id="messages" class="messages" aria-live="polite">
+        <div id="empty-state" class="empty-state">
+          <img src="/icon.svg" alt="" width="56" height="56">
+          <h2 data-i18n="chat.emptyTitle"></h2>
+          <p class="muted" data-i18n="chat.emptyHint"></p>
+        </div>
+      </div>
+
+      <form id="composer" class="composer">
+        <div id="attachments" class="attachments" hidden></div>
+        <div class="composer-box">
+          <button type="button" id="attach-button" class="icon-btn" data-i18n-title="chat.attach">
+            <svg viewBox="0 0 24 24" class="icon"><path d="M21 12.5l-8.5 8.5a5 5 0 01-7-7L14 5.5a3.3 3.3 0 014.7 4.7L10.2 18.7a1.7 1.7 0 01-2.4-2.4L15.5 8.6"/></svg>
+          </button>
+          <input type="file" id="file-input" accept="image/*" multiple hidden>
+          <textarea id="prompt" rows="1" dir="auto" data-i18n-placeholder="chat.placeholder"></textarea>
+          <button type="submit" id="send-button" class="icon-btn send" data-i18n-title="chat.send">
+            <svg viewBox="0 0 24 24" class="icon"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <button type="button" id="stop-button" class="icon-btn send" data-i18n-title="chat.stop" hidden>
+            <svg viewBox="0 0 24 24" class="icon fill"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+          </button>
+        </div>
+        <p class="muted tiny center" data-i18n="chat.disclaimer"></p>
+      </form>
+    </main>
+  </div>
+
+  <!-- Model picker -->
+  <dialog id="model-dialog" class="dialog wide">
+    <div class="dialog-head">
+      <h3 data-i18n="models.title"></h3>
+      <button type="button" id="models-refresh" class="btn ghost small" data-i18n="models.refresh"></button>
+      <button type="button" class="icon-btn" data-close data-i18n-title="common.close">
+        <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialog-tools">
+      <input id="model-search" type="search" class="input" data-i18n-placeholder="models.search">
+      <div id="provider-tabs" class="tabs" role="tablist"></div>
+      <label class="row gap small"><input type="checkbox" id="filter-vision"><span data-i18n="models.onlyVision"></span></label>
+    </div>
+    <div id="model-list" class="model-list"></div>
+  </dialog>
+
+  <!-- Chat settings -->
+  <dialog id="settings-dialog" class="dialog">
+    <form method="dialog" id="settings-form">
+      <div class="dialog-head">
+        <h3 data-i18n="settings.title"></h3>
+        <button type="button" class="icon-btn" data-close data-i18n-title="common.close">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <label class="field">
+          <span data-i18n="settings.systemPrompt"></span>
+          <textarea id="set-system" rows="5" dir="auto" class="input" data-i18n-placeholder="settings.systemPromptHint"></textarea>
+        </label>
+        <label class="field">
+          <span><span data-i18n="settings.temperature"></span>: <output id="set-temp-out"></output></span>
+          <input id="set-temp" type="range">
+        </label>
+        <label class="field">
+          <span data-i18n="settings.maxTokens"></span>
+          <input id="set-max" type="number" min="1" class="input" data-i18n-placeholder="settings.maxTokensHint">
+        </label>
+        <label class="field" id="set-effort-field">
+          <span data-i18n="settings.reasoningEffort"></span>
+          <select id="set-effort" class="input"></select>
+        </label>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost" data-close data-i18n="common.cancel"></button>
+        <button type="submit" id="settings-save" class="btn primary" data-i18n="common.save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Generic prompt / confirm -->
+  <dialog id="prompt-dialog" class="dialog">
+    <form method="dialog" id="prompt-form">
+      <div class="dialog-body">
+        <p id="prompt-message"></p>
+        <input id="prompt-input" class="input" dir="auto">
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost" data-close data-i18n="common.cancel"></button>
+        <button type="submit" id="prompt-ok" class="btn primary" data-i18n="common.ok"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

@@ -1,0 +1,133 @@
+{
+  "meta": { "name": "English", "dir": "ltr", "locale": "en" },
+  "ui": {
+    "languages": { "en": "English", "fa": "فارسی" },
+    "common": { "close": "Close", "cancel": "Cancel", "save": "Save", "ok": "OK" },
+    "login": {
+      "subtitle": "Enter your PIN to continue",
+      "placeholder": "PIN",
+      "submit": "Unlock"
+    },
+    "theme": { "system": "System", "light": "Light", "dark": "Dark" },
+    "sidebar": {
+      "newChat": "New chat",
+      "search": "Search chats",
+      "theme": "Theme",
+      "language": "Language",
+      "logout": "Log out",
+      "pinned": "Pinned",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7": "Previous 7 days",
+      "last30": "Previous 30 days",
+      "older": "Older",
+      "untitled": "New chat",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "rename": "Rename",
+      "delete": "Delete",
+      "renamePrompt": "New title for this chat:",
+      "deleteConfirm": "Delete \"{title}\"? This cannot be undone."
+    },
+    "topbar": { "toggleSidebar": "Show chats", "chatSettings": "Chat settings" },
+    "chat": {
+      "emptyTitle": "How can I help you today?",
+      "emptyHint": "Pick a model at the top and start typing.",
+      "placeholder": "Message…",
+      "attach": "Attach images",
+      "send": "Send",
+      "stop": "Stop generating",
+      "disclaimer": "AI models can make mistakes. Verify important information.",
+      "code": "code",
+      "copyCode": "Copy",
+      "copied": "Copied",
+      "copy": "Copy",
+      "edit": "Edit",
+      "saveAndSend": "Save & send",
+      "regenerate": "Regenerate",
+      "reasoning": "Reasoning",
+      "thinking": "Thinking…",
+      "errorPrefix": "Error: {error}",
+      "stopped": "stopped",
+      "tokens": "{input} in / {output} out tokens",
+      "noVisionWarning": "This model may not support images.",
+      "removeImage": "Remove image"
+    },
+    "models": {
+      "title": "Select a model",
+      "refresh": "Refresh",
+      "search": "Search models by name or id",
+      "onlyVision": "Only models with image input",
+      "loading": "Loading models…",
+      "allProviders": "All",
+      "noResults": "No models match.",
+      "truncated": "Showing {shown} of {total} models. Refine your search.",
+      "price": "In {input} / Out {output} per {per} tokens",
+      "contextK": "{n}K context",
+      "contextM": "{n}M context",
+      "vision": "vision",
+      "reasoning": "reasoning",
+      "choose": "Choose a model"
+    },
+    "settings": {
+      "title": "Chat settings",
+      "systemPrompt": "System prompt",
+      "systemPromptHint": "Optional instructions the model follows for this whole chat",
+      "temperature": "Temperature",
+      "maxTokens": "Max output tokens",
+      "maxTokensHint": "Empty = provider default",
+      "reasoningEffort": "Reasoning effort",
+      "effort": { "default": "Default", "low": "Low", "medium": "Medium", "high": "High" }
+    },
+    "errors": {
+      "internal": "Something went wrong.",
+      "unauthorized": "Your session expired. Please log in again.",
+      "invalidPin": "Wrong PIN.",
+      "locked": "Too many failed attempts. Try again in {minutes} min.",
+      "pinNotConfigured": "No PIN is configured on the server. Run \"npm run set-pin\" or set WCA_PIN.",
+      "providerKeyMissing": "No API key configured for {provider}.",
+      "unknownProvider": "Unknown provider.",
+      "modelRequired": "Choose a model first.",
+      "emptyMessage": "Message is empty.",
+      "invalidImage": "Unsupported image type.",
+      "imageTooLarge": "Image is too large (max {max} MB).",
+      "tooManyImages": "Too many images in one message.",
+      "notFound": "Not found.",
+      "upstream": "Provider request failed.",
+      "payloadTooLarge": "Request is too large.",
+      "badOrigin": "Request blocked (origin mismatch).",
+      "unsupportedMediaType": "Unsupported request type.",
+      "invalidJson": "Invalid request.",
+      "nothingToRegenerate": "Nothing to regenerate.",
+      "methodNotAllowed": "Method not allowed."
+    }
+  },
+  "server": {
+    "log": {
+      "listening": "Listening on http://{host}:{port}",
+      "storageReady": "Storage ready at {dir} ({count} conversations)",
+      "secretsReadError": "Could not read secrets file {file}: {error}",
+      "sessionSecretGenerated": "Generated a new session secret and saved it to {file}",
+      "sessionSecretEphemeral": "Could not persist session secret ({error}); sessions will reset on restart. Set WCA_SESSION_SECRET.",
+      "conversationReadError": "Skipping unreadable conversation file {file}: {error}",
+      "loginFailed": "Failed login from {ip}",
+      "loginOk": "Successful login from {ip}",
+      "chatError": "Chat error [{provider} / {model}]: {error}",
+      "pinEnvInvalid": "WCA_PIN does not match the configured PIN format; ignoring it.",
+      "pinMissing": "No PIN configured. Run \"npm run set-pin\" or set WCA_PIN / WCA_PIN_HASH. Login is impossible until then.",
+      "providerKeyMissing": "Provider \"{provider}\" has no API key (set {env} or add it to the secrets file).",
+      "unhandled": "Unhandled error: {error}",
+      "fatal": "Fatal error: {error}"
+    },
+    "errors": {
+      "upstream": "Upstream error {status}: {message}"
+    },
+    "cli": {
+      "enterPin": "New PIN: ",
+      "confirmPin": "Repeat PIN: ",
+      "pinInvalid": "Invalid PIN. It must be {min}-{max} characters and match auth.pinPattern in config.json.",
+      "pinMismatch": "PINs do not match.",
+      "pinSaved": "PIN hash saved to {file}. Restart the server to apply."
+    }
+  }
+}

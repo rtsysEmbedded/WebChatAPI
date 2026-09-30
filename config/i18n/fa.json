@@ -1,0 +1,133 @@
+{
+  "meta": { "name": "فارسی", "dir": "rtl", "locale": "fa" },
+  "ui": {
+    "languages": { "en": "English", "fa": "فارسی" },
+    "common": { "close": "بستن", "cancel": "انصراف", "save": "ذخیره", "ok": "تأیید" },
+    "login": {
+      "subtitle": "برای ادامه، PIN خود را وارد کنید",
+      "placeholder": "PIN",
+      "submit": "ورود"
+    },
+    "theme": { "system": "سیستم", "light": "روشن", "dark": "تیره" },
+    "sidebar": {
+      "newChat": "گفتگوی جدید",
+      "search": "جستجو در گفتگوها",
+      "theme": "پوسته",
+      "language": "زبان",
+      "logout": "خروج",
+      "pinned": "سنجاق‌شده",
+      "today": "امروز",
+      "yesterday": "دیروز",
+      "last7": "۷ روز گذشته",
+      "last30": "۳۰ روز گذشته",
+      "older": "قدیمی‌تر",
+      "untitled": "گفتگوی جدید",
+      "pin": "سنجاق کردن",
+      "unpin": "برداشتن سنجاق",
+      "rename": "تغییر نام",
+      "delete": "حذف",
+      "renamePrompt": "عنوان جدید این گفتگو:",
+      "deleteConfirm": "«{title}» حذف شود؟ این کار برگشت‌پذیر نیست."
+    },
+    "topbar": { "toggleSidebar": "نمایش گفتگوها", "chatSettings": "تنظیمات گفتگو" },
+    "chat": {
+      "emptyTitle": "امروز چطور می‌توانم کمکتان کنم؟",
+      "emptyHint": "از بالای صفحه یک مدل انتخاب کنید و شروع به نوشتن کنید.",
+      "placeholder": "پیام…",
+      "attach": "پیوست تصویر",
+      "send": "ارسال",
+      "stop": "توقف تولید پاسخ",
+      "disclaimer": "مدل‌های هوش مصنوعی ممکن است اشتباه کنند. اطلاعات مهم را بررسی کنید.",
+      "code": "کد",
+      "copyCode": "کپی",
+      "copied": "کپی شد",
+      "copy": "کپی",
+      "edit": "ویرایش",
+      "saveAndSend": "ذخیره و ارسال",
+      "regenerate": "تولید دوباره",
+      "reasoning": "استدلال",
+      "thinking": "در حال فکر کردن…",
+      "errorPrefix": "خطا: {error}",
+      "stopped": "متوقف شد",
+      "tokens": "توکن ورودی {input} / خروجی {output}",
+      "noVisionWarning": "ممکن است این مدل از تصویر پشتیبانی نکند.",
+      "removeImage": "حذف تصویر"
+    },
+    "models": {
+      "title": "انتخاب مدل",
+      "refresh": "بارگذاری دوباره",
+      "search": "جستجوی مدل با نام یا شناسه",
+      "onlyVision": "فقط مدل‌هایی که ورودی تصویر دارند",
+      "loading": "در حال بارگذاری مدل‌ها…",
+      "allProviders": "همه",
+      "noResults": "مدلی پیدا نشد.",
+      "truncated": "نمایش {shown} از {total} مدل. جستجو را دقیق‌تر کنید.",
+      "price": "ورودی {input} / خروجی {output} به ازای {per} توکن",
+      "contextK": "کانتکست {n}K",
+      "contextM": "کانتکست {n}M",
+      "vision": "تصویر",
+      "reasoning": "استدلال",
+      "choose": "یک مدل انتخاب کنید"
+    },
+    "settings": {
+      "title": "تنظیمات گفتگو",
+      "systemPrompt": "پرامپت سیستمی",
+      "systemPromptHint": "دستورالعمل اختیاری که مدل در کل این گفتگو رعایت می‌کند",
+      "temperature": "دما (Temperature)",
+      "maxTokens": "حداکثر توکن خروجی",
+      "maxTokensHint": "خالی = پیش‌فرض ارائه‌دهنده",
+      "reasoningEffort": "میزان استدلال",
+      "effort": { "default": "پیش‌فرض", "low": "کم", "medium": "متوسط", "high": "زیاد" }
+    },
+    "errors": {
+      "internal": "مشکلی پیش آمد.",
+      "unauthorized": "نشست شما منقضی شده است. دوباره وارد شوید.",
+      "invalidPin": "PIN اشتباه است.",
+      "locked": "تعداد تلاش‌های ناموفق زیاد است. {minutes} دقیقه دیگر دوباره تلاش کنید.",
+      "pinNotConfigured": "روی سرور PIN تنظیم نشده است. دستور \"npm run set-pin\" را اجرا کنید یا WCA_PIN را تنظیم کنید.",
+      "providerKeyMissing": "برای {provider} کلید API تنظیم نشده است.",
+      "unknownProvider": "ارائه‌دهنده ناشناخته است.",
+      "modelRequired": "ابتدا یک مدل انتخاب کنید.",
+      "emptyMessage": "پیام خالی است.",
+      "invalidImage": "نوع تصویر پشتیبانی نمی‌شود.",
+      "imageTooLarge": "حجم تصویر زیاد است (حداکثر {max} مگابایت).",
+      "tooManyImages": "تعداد تصاویر در یک پیام بیش از حد مجاز است.",
+      "notFound": "پیدا نشد.",
+      "upstream": "درخواست به ارائه‌دهنده ناموفق بود.",
+      "payloadTooLarge": "حجم درخواست بیش از حد مجاز است.",
+      "badOrigin": "درخواست مسدود شد (مبدأ نامعتبر).",
+      "unsupportedMediaType": "نوع درخواست پشتیبانی نمی‌شود.",
+      "invalidJson": "درخواست نامعتبر است.",
+      "nothingToRegenerate": "چیزی برای تولید دوباره وجود ندارد.",
+      "methodNotAllowed": "این متد مجاز نیست."
+    }
+  },
+  "server": {
+    "log": {
+      "listening": "سرور روی http://{host}:{port} در حال اجراست",
+      "storageReady": "فضای ذخیره‌سازی در {dir} آماده است ({count} گفتگو)",
+      "secretsReadError": "خواندن فایل اسرار {file} ممکن نشد: {error}",
+      "sessionSecretGenerated": "کلید نشست جدید ساخته و در {file} ذخیره شد",
+      "sessionSecretEphemeral": "ذخیرهٔ کلید نشست ممکن نشد ({error})؛ با راه‌اندازی دوباره، نشست‌ها از بین می‌روند. WCA_SESSION_SECRET را تنظیم کنید.",
+      "conversationReadError": "فایل گفتگوی {file} قابل خواندن نیست و نادیده گرفته شد: {error}",
+      "loginFailed": "ورود ناموفق از {ip}",
+      "loginOk": "ورود موفق از {ip}",
+      "chatError": "خطای گفتگو [{provider} / {model}]: {error}",
+      "pinEnvInvalid": "مقدار WCA_PIN با قالب تعریف‌شده برای PIN مطابقت ندارد و نادیده گرفته شد.",
+      "pinMissing": "PIN تنظیم نشده است. \"npm run set-pin\" را اجرا کنید یا WCA_PIN / WCA_PIN_HASH را تنظیم کنید. تا آن زمان ورود ممکن نیست.",
+      "providerKeyMissing": "ارائه‌دهندهٔ «{provider}» کلید API ندارد ({env} را تنظیم کنید یا آن را به فایل اسرار اضافه کنید).",
+      "unhandled": "خطای مدیریت‌نشده: {error}",
+      "fatal": "خطای بحرانی: {error}"
+    },
+    "errors": {
+      "upstream": "خطای ارائه‌دهنده {status}: {message}"
+    },
+    "cli": {
+      "enterPin": "PIN جدید: ",
+      "confirmPin": "تکرار PIN: ",
+      "pinInvalid": "PIN نامعتبر است. باید بین {min} تا {max} نویسه باشد و با auth.pinPattern در config.json مطابقت داشته باشد.",
+      "pinMismatch": "PINها یکسان نیستند.",
+      "pinSaved": "هش PIN در {file} ذخیره شد. برای اعمال، سرور را دوباره راه‌اندازی کنید."
+    }
+  }
+}
