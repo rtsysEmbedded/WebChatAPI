@@ -4,7 +4,7 @@
 // prompt + long-term memory) and the message list with attachments resolved.
 // Also runs the automatic memory extraction after a reply.
 
-const { config, prompts, fill, log } = require('./config');
+const { config, prompts, fill, log, t } = require('./config');
 const storage = require('./storage');
 const { getProvider, buildBody, serializeBody, complete } = require('./providers');
 
@@ -89,27 +89,63 @@ function clip(text, max) {
   return text.length > max ? text.slice(0, max) + '…' : text;
 }
 
-// Returns the list of memory items added (possibly empty). Never throws.
-async function extractMemory(conversation, userMsg, assistantMsg, providerKeys) {
+// Parse the extractor's answer. Models often wrap JSON in code fences or add
+// prose around it, so try the whole text first, then every {...} span.
+function parseJsonObject(text) {
+  const clean = text.replace(/```(?:json)?/gi, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    /* fall through */
+  }
+  for (let i = clean.indexOf('{'); i >= 0; i = clean.indexOf('{', i + 1)) {
+    for (let j = clean.lastIndexOf('}'); j > i; j = clean.lastIndexOf('}', j - 1)) {
+      try {
+        const obj = JSON.parse(clean.slice(i, j + 1));
+        if (obj && typeof obj === 'object' && ('add' in obj || 'remove' in obj)) return obj;
+      } catch {
+        /* try a shorter span */
+      }
+    }
+  }
+  return null;
+}
+
+// Recent messages (oldest first) as plain text for the extractor. The
+// extractor needs more than the latest message: users often give the facts
+// first and only then say "remember this".
+function recentConversation(conversation, cfg) {
+  const names = P.memory.extract.roles;
+  return conversation.messages
+    .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim())
+    .slice(-cfg.contextMessages)
+    .map((m) => fill(P.memory.extract.line, { role: names[m.role], text: clip(m.content.trim(), cfg.maxContextChars) }))
+    .join('\n\n');
+}
+
+// Update long-term memory from the latest exchange. Returns
+// { added: [...], removed: [...], error: string|null }. Never throws.
+async function extractMemory(conversation, providerKeys) {
   const cfg = config.memory.autoExtract;
-  if (!memoryActive(conversation) || !cfg.enabled) return [];
-  if (!userMsg || !userMsg.content || !userMsg.content.trim()) return [];
-  if (storage.memory.size >= config.memory.maxItems) return [];
+  const result = { added: [], removed: [], error: null };
+  if (!memoryActive(conversation) || !cfg.enabled) return result;
 
   const useOwn = cfg.providerId && cfg.modelId;
   const p = getProvider(useOwn ? cfg.providerId : conversation.providerId);
   const key = p && providerKeys[p.id];
-  if (!key) return [];
+  if (!key) return result;
 
+  const excerpt = recentConversation(conversation, cfg);
+  if (!excerpt) return result;
   const existing = storage.memory.all();
+  const numbered = existing.map((m, i) => fill(P.memory.extract.item, { n: i + 1, text: m.text })).join('\n');
   const messages = [
     { role: 'system', content: P.memory.extract.system },
     {
       role: 'user',
       content: fill(P.memory.extract.user, {
-        memory: existing.length ? memoryList(existing) : P.memory.extract.emptyMemory,
-        user: clip(userMsg.content, cfg.maxContextChars),
-        assistant: clip(assistantMsg.content || '', cfg.maxContextChars),
+        memory: existing.length ? numbered : P.memory.extract.emptyMemory,
+        conversation: excerpt,
       }),
     },
   ];
@@ -123,24 +159,39 @@ async function extractMemory(conversation, userMsg, assistantMsg, providerKeys) 
   try {
     const json = serializeBody(p, buildBody(p, settings, messages, false));
     const answer = await complete(p, key, json, AbortSignal.timeout(cfg.timeoutSeconds * 1000));
-    const match = /\{[\s\S]*\}/.exec(answer);
-    if (!match) return [];
-    const parsed = JSON.parse(match[0]);
-    const seen = new Set(existing.map((m) => normalizeFact(m.text)));
-    const added = [];
-    for (const fact of Array.isArray(parsed.add) ? parsed.add : []) {
-      if (added.length >= cfg.maxAddPerTurn || storage.memory.size >= config.memory.maxItems) break;
-      if (typeof fact !== 'string') continue;
-      const text = fact.trim();
-      if (!text || text.length > config.memory.maxItemChars || seen.has(normalizeFact(text))) continue;
-      seen.add(normalizeFact(text));
-      added.push(await storage.memory.add({ text, source: 'auto', conversationId: conversation.id }));
+    const parsed = parseJsonObject(answer);
+    if (!parsed) {
+      log('server.log.memoryExtractParse', { answer: clip(answer, 500) });
+      result.error = t('server.errors.memoryParse');
+      return result;
     }
-    return added;
+
+    // Removals first (by the 1-based numbers shown to the model), so a
+    // corrected fact can replace the outdated one in the same turn.
+    const toRemove = (Array.isArray(parsed.remove) ? parsed.remove : [])
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n >= 1 && n <= existing.length)
+      .slice(0, cfg.maxRemovePerTurn);
+    for (const n of new Set(toRemove)) {
+      const item = existing[n - 1];
+      if (await storage.memory.remove(item.id)) result.removed.push(item);
+    }
+
+    const seen = new Set(storage.memory.all().map((m) => normalizeFact(m.text)));
+    for (const fact of Array.isArray(parsed.add) ? parsed.add : []) {
+      if (result.added.length >= cfg.maxAddPerTurn || storage.memory.size >= config.memory.maxItems) break;
+      if (typeof fact !== 'string') continue;
+      const text = fact.trim().slice(0, config.memory.maxItemChars);
+      if (!text || seen.has(normalizeFact(text))) continue;
+      seen.add(normalizeFact(text));
+      result.added.push(await storage.memory.add({ text, source: 'auto', conversationId: conversation.id }));
+    }
+    return result;
   } catch (err) {
     log('server.log.memoryExtractError', { error: err.message });
-    return [];
+    result.error = err.message;
+    return result;
   }
 }
 
-module.exports = { systemPrompt, upstreamMessages, extractMemory, TEXT_KINDS };
+module.exports = { systemPrompt, upstreamMessages, extractMemory, parseJsonObject, TEXT_KINDS };

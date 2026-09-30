@@ -325,8 +325,10 @@
       "maxTokens": null,
       "temperature": null,
       "timeoutSeconds": 60,
-      "maxAddPerTurn": 3,
-      "maxContextChars": 4000
+      "maxAddPerTurn": 5,
+      "maxRemovePerTurn": 5,
+      "maxContextChars": 4000,
+      "contextMessages": 6
     }
   },
   "characters": {

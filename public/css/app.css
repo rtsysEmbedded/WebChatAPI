@@ -270,6 +270,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .model-list .notice.error { color: var(--danger); }
 
 .toast {
+  white-space: pre-line;
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg);
   padding: 8px 16px; border-radius: 10px; font-size: 14px; z-index: 100; max-width: calc(100vw - 32px); box-shadow: var(--shadow);
 }

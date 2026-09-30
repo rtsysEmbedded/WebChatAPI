@@ -124,8 +124,10 @@ See [features.md](features.md#long-term-memory).
 | `autoExtract.providerId` / `modelId` | `null` / `null` | Model for extraction. Both `null` = the chat's model. |
 | `autoExtract.maxTokens` / `temperature` | `null` / `null` | Sent only when set (some reasoning models reject `temperature`). |
 | `autoExtract.timeoutSeconds` | `60` | Abort extraction after this time. |
-| `autoExtract.maxAddPerTurn` | `3` | Maximum new facts per answer. |
-| `autoExtract.maxContextChars` | `4000` | Characters of the user message and of the reply sent to the extractor. |
+| `autoExtract.maxAddPerTurn` | `5` | Maximum new facts per answer. |
+| `autoExtract.maxRemovePerTurn` | `5` | Maximum facts removed per answer (“forget …”, corrections). |
+| `autoExtract.maxContextChars` | `4000` | Maximum characters per message sent to the extractor. |
+| `autoExtract.contextMessages` | `6` | Number of recent messages (user and assistant) the extractor sees, so that “remember this” also covers information given earlier. |
 
 ## `characters`
 

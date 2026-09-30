@@ -206,7 +206,6 @@ async function chat(req, res, id) {
     }
     c.messages.push({ id: storage.newId(), role: 'user', content, attachments, createdAt: now() });
   }
-  const userMsg = c.messages[c.messages.length - 1];
 
   // Build and size-check the upstream request before anything is stored, so
   // a rejected request leaves the conversation unchanged.
@@ -280,10 +279,11 @@ async function chat(req, res, id) {
   send('done', { message: assistant, conversation: { ...c, messages: undefined } });
 
   // Long-term memory: runs after the answer is complete, so it never delays
-  // it. The UI is told about new facts through a final 'memory' event.
-  if (!assistant.stopped && !assistant.error && !body.regenerate && open()) {
-    const added = await context.extractMemory(c, userMsg, assistant, secrets.providerKeys);
-    if (added.length) send('memory', { added });
+  // it, and also when the browser has already disconnected. The UI is told
+  // about changes (or a failure) through a final 'memory' event.
+  if (!assistant.stopped && !assistant.error && !body.regenerate) {
+    const mem = await context.extractMemory(c, secrets.providerKeys);
+    if (mem.added.length || mem.removed.length || mem.error) send('memory', mem);
   }
   clearInterval(keepAlive);
   if (open()) res.end();

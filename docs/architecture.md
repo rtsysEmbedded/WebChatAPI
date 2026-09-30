@@ -129,7 +129,7 @@ is saved.
 | `delta` | `{ type: "content" \| "reasoning", text }` | Next piece of answer or reasoning text. |
 | `usage` | `{ usage: { prompt_tokens, completion_tokens, ... } }` | Token usage, when the provider sends it. |
 | `done` | `{ message, conversation }` | The final assistant message as stored, including `error`, `stopped` and `usage`. The answer is complete; the UI finishes here. |
-| `memory` | `{ added: [{ id, text, ... }] }` | Optional, after `done`: facts added by automatic memory extraction. The stream then ends. |
+| `memory` | `{ added: [...], removed: [...], error: string \| null }` | Optional, after `done`: result of automatic memory extraction (sent only when something changed or it failed). The stream then ends. |
 
 Provider errors, including error frames sent in the middle of a stream (for example
 `data: {"error":{...}}` from Clean APIs), do not break the protocol. They end up in

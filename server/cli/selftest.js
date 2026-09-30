@@ -77,7 +77,15 @@ async function main() {
   // Prompt templates contain the placeholders the code fills in.
   assert.ok(prompts.memory.block.includes('{items}'));
   assert.ok(prompts.memory.item.includes('{text}'));
-  for (const v of ['{memory}', '{user}', '{assistant}']) assert.ok(prompts.memory.extract.user.includes(v));
+  for (const v of ['{memory}', '{conversation}']) assert.ok(prompts.memory.extract.user.includes(v));
+  assert.ok(prompts.memory.extract.item.includes('{n}') && prompts.memory.extract.line.includes('{text}'));
+
+  // Memory extraction answers: plain, fenced, and wrapped in prose.
+  const { parseJsonObject } = require('../context');
+  assert.deepStrictEqual(parseJsonObject('{"add":["a"],"remove":[]}'), { add: ['a'], remove: [] });
+  assert.deepStrictEqual(parseJsonObject('```json\n{"add":["b"]}\n```'), { add: ['b'] });
+  assert.deepStrictEqual(parseJsonObject('Sure {x} here: {"add":["c"],"remove":[2]} done.'), { add: ['c'], remove: [2] });
+  assert.strictEqual(parseJsonObject('no json here'), null);
   assert.ok(prompts.attachments.document.includes('{name}') && prompts.attachments.document.includes('{text}'));
   assert.strictEqual(fill('a {x} {y}', { x: '{y}' }), 'a {y} {y}'); // substituted text is not re-expanded
 

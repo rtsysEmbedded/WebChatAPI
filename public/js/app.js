@@ -624,7 +624,11 @@ window.App = (() => {
           upsertSummary(conv);
           finish(); // the answer is complete; a 'memory' event may still follow
         } else if (event === 'memory') {
-          toast(t('memory.updated', { facts: data.added.map((m) => m.text).join(' · ') }));
+          const lines = [];
+          if (data.added.length) lines.push(t('memory.updated', { facts: data.added.map((m) => m.text).join(' · ') }));
+          if (data.removed.length) lines.push(t('memory.removed', { facts: data.removed.map((m) => m.text).join(' · ') }));
+          if (data.error) lines.push(t('memory.failed', { error: data.error }));
+          toast(lines.join('\n'));
         }
       }, controller.signal);
     } catch (err) {

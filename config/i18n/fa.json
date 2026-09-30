@@ -159,7 +159,9 @@
       "auto": "خودکار",
       "manual": "دستی",
       "updated": "حافظه به‌روز شد: {facts}",
-      "disabled": "حافظه در config.json غیرفعال است (memory.enabled)."
+      "disabled": "حافظه در config.json غیرفعال است (memory.enabled).",
+      "removed": "فراموش شد: {facts}",
+      "failed": "حافظه به‌روز نشد: {error}"
     },
     "characters": {
       "title": "شخصیت‌ها",
@@ -206,11 +208,13 @@
       "envReadError": "خواندن فایل env در {file} ممکن نشد: {error}",
       "envUnsupported": "این نسخهٔ Node.js نمی‌تواند {file} را بارگذاری کند؛ از Node.js 20.12 یا جدیدتر استفاده کنید یا متغیرها را در shell تنظیم کنید.",
       "uploadsCleaned": "{count} فایل بدون استفاده حذف شد",
-      "memoryExtractError": "استخراج حافظه ناموفق بود: {error}"
+      "memoryExtractError": "استخراج حافظه ناموفق بود: {error}",
+      "memoryExtractParse": "استخراج حافظه JSON قابل‌استفاده برنگرداند: {answer}"
     },
     "errors": {
       "upstream": "خطای ارائه‌دهنده {status}: {message}",
-      "requestTooLarge": "حجم درخواست {size} مگابایت است، اما {provider} حداکثر {max} مگابایت می‌پذیرد. برخی پیوست‌ها را حذف کنید یا گفتگوی جدیدی شروع کنید."
+      "requestTooLarge": "حجم درخواست {size} مگابایت است، اما {provider} حداکثر {max} مگابایت می‌پذیرد. برخی پیوست‌ها را حذف کنید یا گفتگوی جدیدی شروع کنید.",
+      "memoryParse": "مدل JSON معتبر برنگرداند"
     },
     "cli": {
       "enterPin": "PIN جدید: ",

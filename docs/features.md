@@ -29,7 +29,24 @@ so keep it short. `memory.maxItems` and `memory.maxItemChars` bound it.
 | Way | Details |
 |-----|---------|
 | Manually | Sidebar → **Memory** → type a fact → **Add**. Facts can be edited or deleted there. |
-| Automatically | After each complete answer (not after *Stop*, errors or *Regenerate*), the server makes **one extra non-streaming request**. It sends the existing memory, your latest message and the reply to a model, using the instruction in `prompts.json → memory.extract`. The model returns `{"add": [...]}`. New facts are de-duplicated (case- and punctuation-insensitive), limited to `autoExtract.maxAddPerTurn`, and saved with source `auto`. The UI shows **“Memory updated: …”**. |
+| Automatically | After each complete answer (not after *Stop*, errors or *Regenerate*), the server makes **one extra non-streaming request** to a model with the instruction in `prompts.json → memory.extract`. It sends the numbered existing memory and the **last `autoExtract.contextMessages` messages** of the chat (default 6). The model returns `{"add": [...], "remove": [numbers]}`. |
+
+What the extractor is told to do:
+
+- **Explicit requests always win.** “Remember this”, “don't forget”, «یادت بمونه», «به خاطر
+  بسپار» and similar phrases are always saved, even for task-specific details and even when
+  the information itself was given in an earlier message. That is why several recent
+  messages are sent, not only the last one.
+- Otherwise, only durable facts you state about yourself are saved: name, profession,
+  projects, tools, preferences, goals.
+- “Forget …” or a correction removes the outdated entry (and adds the corrected one).
+- Duplicates are ignored (case- and punctuation-insensitive). Limits per answer:
+  `maxAddPerTurn`, `maxRemovePerTurn`.
+
+The UI shows **“Memory updated: …”**, **“Forgotten: …”**, or **“Memory could not be
+updated: …”** when extraction fails. The raw model answer is then logged
+(`Memory extraction returned no usable JSON`). The JSON is accepted even when the model
+wraps it in a code block or adds text around it.
 
 Automatic extraction settings (`config.json → memory.autoExtract`):
 
@@ -37,11 +54,24 @@ Automatic extraction settings (`config.json → memory.autoExtract`):
 - `providerId` + `modelId`: the model used for extraction. When both are `null`, the
   chat's current model is used. A small, cheap model is recommended, for example set
   `"providerId": "openrouter", "modelId": "<a cheap model id>"`.
-- `maxContextChars`: how much of your message and the reply is sent (cost control).
+- `contextMessages`: how many recent messages (yours and the assistant's) the extractor
+  sees (default 6).
+- `maxContextChars`: maximum characters per message sent to the extractor (cost control).
 - `timeoutSeconds`: extraction is abandoned after this time; the chat is unaffected.
 
 Extraction runs **after** the answer has been fully delivered, so it never delays the
-answer. Its errors are only logged.
+answer. It also completes if you close the page or switch chats in the meantime.
+
+### Troubleshooting: “a new chat doesn't remember anything”
+
+1. Open Sidebar → **Memory**. Memory is injected into every new chat with any provider and
+   model, so if the fact is listed there, it is being sent.
+2. If the list is empty, look at the server log for `Memory extraction failed` or
+   `returned no usable JSON`. Small models sometimes answer with prose. In that case set a
+   more capable extraction model in `memory.autoExtract.providerId` / `modelId`.
+3. Check that memory is on for both chats (Chat settings → “Use long-term memory in this
+   chat”) and that the character used does not switch it off.
+4. You can always add a fact manually in the Memory dialog.
 
 ### Per-chat switch
 

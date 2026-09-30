@@ -159,7 +159,9 @@
       "auto": "auto",
       "manual": "manual",
       "updated": "Memory updated: {facts}",
-      "disabled": "Memory is disabled in config.json (memory.enabled)."
+      "disabled": "Memory is disabled in config.json (memory.enabled).",
+      "removed": "Forgotten: {facts}",
+      "failed": "Memory could not be updated: {error}"
     },
     "characters": {
       "title": "Characters",
@@ -206,11 +208,13 @@
       "envReadError": "Could not read env file {file}: {error}",
       "envUnsupported": "This Node.js version cannot load {file}; use Node.js 20.12 or newer, or set the variables in your shell.",
       "uploadsCleaned": "Removed {count} unused uploads",
-      "memoryExtractError": "Memory extraction failed: {error}"
+      "memoryExtractError": "Memory extraction failed: {error}",
+      "memoryExtractParse": "Memory extraction returned no usable JSON: {answer}"
     },
     "errors": {
       "upstream": "Upstream error {status}: {message}",
-      "requestTooLarge": "Request is {size} MB, but {provider} accepts at most {max} MB. Remove some attachments or start a new chat."
+      "requestTooLarge": "Request is {size} MB, but {provider} accepts at most {max} MB. Remove some attachments or start a new chat.",
+      "memoryParse": "the model did not return valid JSON"
     },
     "cli": {
       "enterPin": "New PIN: ",
