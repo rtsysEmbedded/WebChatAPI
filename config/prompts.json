@@ -1,0 +1,33 @@
+{
+  "systemJoiner": "\n\n",
+  "memory": {
+    "block": "Long-term memory — facts the user has shared in earlier conversations. Use them when they are relevant; do not recite the list unless asked.\n{items}",
+    "item": "- {text}",
+    "extract": {
+      "system": "You maintain the long-term memory of a chat assistant: short facts about the user that must be available in all future conversations, with any model.\nReturn ONLY a JSON object of the form {\"add\": [\"fact\", ...], \"remove\": [number, ...], \"saveConversation\": true|false} and no other text.\n\nRules:\n1. If the user explicitly asks to remember or save something (for example \"remember\", \"don't forget\", \"keep in mind\", \"یادت بمونه\", \"به خاطر بسپار\", \"فراموش نکن\", \"merk dir\"), ALWAYS add that information, even if it is specific to one task, and even if the information itself was given in an earlier message of the excerpt.\n2. Otherwise add only durable facts the user stated about themselves: name, profession, skills, projects, tools, equipment, preferences (language, answer style), goals.\n3. If the user asks to forget something, or corrects or updates a stored fact, put the number of the outdated entry in \"remove\" (and add the corrected fact).\n4. Never add: facts already in memory (even if reworded), questions, general knowledge, facts about the assistant, or anything the user did not state. Use the assistant's messages only to understand what the user meant.\n5. Write each fact as one short, self-contained sentence in the language the user wrote in, keeping concrete values (names, numbers, dates, versions).\n6. Set \"saveConversation\" to true only if the user's newest message explicitly asks to remember, save or keep this conversation or the information in it (same phrases as rule 1). Otherwise false.\nIf nothing changes, return {\"add\": [], \"remove\": [], \"saveConversation\": false}.",
+      "user": "Existing memory (numbered):\n{memory}\n\nRecent conversation (oldest first; the last user message is the newest):\n{conversation}",
+      "item": "[{n}] {text}",
+      "line": "{role}: {text}",
+      "roles": {
+        "user": "User",
+        "assistant": "Assistant"
+      },
+      "emptyMemory": "(empty)"
+    },
+    "summary": {
+      "system": "You write the long-term memory record of a conversation between a user and an AI assistant. The record will be retrieved in future, unrelated conversations, so it must be understandable on its own, without the original chat.\nReturn ONLY a JSON object: {\"title\": \"...\", \"summary\": \"...\"} and no other text.\n- title: at most 10 words, specific (topic + key entity), in the language the user wrote in.\n- summary: clean Markdown in the language the user wrote in, with these sections when they have content (omit empty ones): Context, Key facts and data (keep exact names, numbers, dates, versions, part numbers, commands, short code snippets that matter), Decisions and results, Open questions / next steps.\n- Include everything the user explicitly asked to remember.\n- Leave out greetings, small talk, failed attempts that led nowhere, and the assistant's filler text.\n- Be dense: prefer bullet points; no speculation; do not invent anything.",
+      "user": "Conversation title: {title}\nDate: {date}\n\nTranscript (oldest first):\n{transcript}",
+      "omitted": "[… {count} earlier messages omitted …]"
+    },
+    "archive": {
+      "block": "Relevant notes from earlier conversations (retrieved from long-term memory; use them if they help, and say so when you rely on them):\n{entries}",
+      "entry": "### {title} ({date})\n{text}",
+      "clipped": "\n[…]"
+    }
+  },
+  "attachments": {
+    "document": "<attached_file name=\"{name}\">\n{text}\n</attached_file>",
+    "truncatedNote": "\n[Note: the file was truncated to fit the size limit.]",
+    "empty": "(No extractable text. The file may be a scanned document or image-only.)"
+  }
+}

@@ -1,0 +1,513 @@
+{
+  "app": {
+    "name": "WebChatAPI",
+    "defaultLanguage": "en",
+    "languages": [
+      "en",
+      "fa"
+    ],
+    "serverLogLanguage": "en"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3000,
+    "portEnv": "PORT",
+    "hostEnv": "HOST",
+    "trustedProxyHops": 1,
+    "sseKeepAliveSeconds": 15,
+    "maxJsonBodyBytes": 2097152,
+    "publicDir": "public",
+    "dataDir": "data",
+    "dataDirEnv": "WCA_DATA_DIR",
+    "vendorFiles": {
+      "/vendor/marked.js": "node_modules/marked/lib/marked.umd.js",
+      "/vendor/purify.js": "node_modules/dompurify/dist/purify.min.js",
+      "/vendor/highlight.js": "node_modules/@highlightjs/cdn-assets/highlight.min.js",
+      "/vendor/hljs-light.css": "node_modules/@highlightjs/cdn-assets/styles/github.min.css",
+      "/vendor/hljs-dark.css": "node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css"
+    },
+    "staticCacheSeconds": 3600,
+    "securityHeaders": {
+      "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+    },
+    "mimeTypes": {
+      ".html": "text/html; charset=utf-8",
+      ".js": "text/javascript; charset=utf-8",
+      ".css": "text/css; charset=utf-8",
+      ".json": "application/json; charset=utf-8",
+      ".svg": "image/svg+xml",
+      ".png": "image/png",
+      ".ico": "image/x-icon",
+      ".webmanifest": "application/manifest+json",
+      ".woff2": "font/woff2",
+      ".mjs": "text/javascript; charset=utf-8"
+    }
+  },
+  "auth": {
+    "enabled": true,
+    "pinMinLength": 4,
+    "pinMaxLength": 32,
+    "pinPattern": "^[0-9]+$",
+    "sessionCookieName": "wca_session",
+    "sessionTtlHours": 168,
+    "secureCookie": "auto",
+    "maxFailedAttemptsPerIp": 5,
+    "maxFailedAttemptsGlobal": 30,
+    "attemptWindowMinutes": 15,
+    "lockoutMinutes": 15,
+    "failedLoginDelayMs": 800,
+    "scrypt": {
+      "N": 16384,
+      "r": 8,
+      "p": 1,
+      "keyLength": 64,
+      "saltBytes": 16
+    }
+  },
+  "secrets": {
+    "file": "config/secrets.json",
+    "fileEnv": "WCA_SECRETS_FILE",
+    "envFile": ".env",
+    "env": {
+      "pin": "WCA_PIN",
+      "pinHash": "WCA_PIN_HASH",
+      "sessionSecret": "WCA_SESSION_SECRET"
+    },
+    "autoGenerateSessionSecret": true
+  },
+  "chat": {
+    "defaultProviderId": "cleanapis",
+    "defaultModelId": "gpt-5.6-luna",
+    "defaultTemperature": 0.7,
+    "temperatureMin": 0,
+    "temperatureMax": 2,
+    "temperatureStep": 0.1,
+    "defaultMaxTokens": null,
+    "defaultSystemPrompt": "",
+    "reasoningEfforts": [
+      "",
+      "low",
+      "medium",
+      "high"
+    ],
+    "titleMaxLength": 60,
+    "upstreamTimeoutSeconds": 3600
+  },
+  "ui": {
+    "defaultTheme": "system",
+    "pricePerTokens": 1000000,
+    "priceCurrencySymbol": "$",
+    "priceDecimals": 2,
+    "sendOnEnter": true,
+    "showModelDescriptions": true,
+    "maxModelResults": 1000,
+    "searchDebounceMs": 300
+  },
+  "providers": [
+    {
+      "id": "cleanapis",
+      "name": "Clean APIs",
+      "enabled": true,
+      "baseUrl": "https://cleanapis.com/v1",
+      "apiKeyEnv": "CLEANAPIS_API_KEY",
+      "modelsPath": "/models",
+      "chatPath": "/chat/completions",
+      "embeddingsPath": "/embeddings",
+      "headers": {},
+      "extraBody": {},
+      "supportsReasoningEffort": false,
+      "minMaxTokens": 2048,
+      "maxRequestBytes": 8000000,
+      "modelsCacheMinutes": 60,
+      "modelFilter": {
+        "field": "type",
+        "allow": [
+          "chat"
+        ]
+      },
+      "embeddingModels": {
+        "path": "/models",
+        "filter": {
+          "field": "type",
+          "allow": [
+            "embedding"
+          ]
+        }
+      },
+      "modelFields": {
+        "id": "id",
+        "name": "name",
+        "description": "description",
+        "contextLength": "context_window",
+        "inputPrice": "pricing.input_per_1k",
+        "outputPrice": "pricing.output_per_1k",
+        "capabilities": "capabilities",
+        "inputModalities": null
+      },
+      "priceUnitTokens": 1000,
+      "visionCapability": "vision",
+      "videoCapability": null,
+      "reasoningFields": [
+        "reasoning_content",
+        "reasoning"
+      ],
+      "staticModels": []
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "enabled": true,
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyEnv": "OPENROUTER_API_KEY",
+      "modelsPath": "/models",
+      "chatPath": "/chat/completions",
+      "embeddingsPath": "/embeddings",
+      "headers": {
+        "X-Title": "WebChatAPI"
+      },
+      "extraBody": {},
+      "supportsReasoningEffort": true,
+      "minMaxTokens": null,
+      "maxRequestBytes": null,
+      "modelsCacheMinutes": 60,
+      "modelFilter": {
+        "field": "architecture.output_modalities",
+        "allow": [
+          "text"
+        ]
+      },
+      "embeddingModels": {
+        "path": "/embeddings/models",
+        "filter": null
+      },
+      "modelFields": {
+        "id": "id",
+        "name": "name",
+        "description": "description",
+        "contextLength": "context_length",
+        "inputPrice": "pricing.prompt",
+        "outputPrice": "pricing.completion",
+        "capabilities": "supported_parameters",
+        "inputModalities": "architecture.input_modalities"
+      },
+      "priceUnitTokens": 1,
+      "visionCapability": null,
+      "videoCapability": null,
+      "reasoningFields": [
+        "reasoning",
+        "reasoning_content"
+      ],
+      "staticModels": []
+    }
+  ],
+  "attachments": {
+    "maxFilesPerMessage": 6,
+    "maxTextChars": 200000,
+    "maxPdfPages": 300,
+    "orphanUploadHours": 24,
+    "cleanupIntervalMinutes": 60,
+    "kinds": {
+      "image": {
+        "extensions": [
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".webp",
+          ".gif"
+        ],
+        "mimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/gif"
+        ],
+        "maxBytes": 5242880,
+        "upstreamMime": {}
+      },
+      "video": {
+        "extensions": [
+          ".mp4",
+          ".mpeg",
+          ".mpg",
+          ".mov",
+          ".webm"
+        ],
+        "mimeTypes": [
+          "video/mp4",
+          "video/mpeg",
+          "video/quicktime",
+          "video/webm"
+        ],
+        "maxBytes": 52428800,
+        "upstreamMime": {
+          "video/quicktime": "video/mov"
+        }
+      },
+      "pdf": {
+        "extensions": [
+          ".pdf"
+        ],
+        "mimeTypes": [
+          "application/pdf"
+        ],
+        "maxBytes": 20971520,
+        "upstreamMime": {}
+      },
+      "docx": {
+        "extensions": [
+          ".docx"
+        ],
+        "mimeTypes": [
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+        "maxBytes": 20971520,
+        "upstreamMime": {}
+      },
+      "text": {
+        "extensions": [
+          ".txt",
+          ".md",
+          ".markdown",
+          ".csv",
+          ".tsv",
+          ".json",
+          ".xml",
+          ".yaml",
+          ".yml",
+          ".toml",
+          ".ini",
+          ".log",
+          ".html",
+          ".css",
+          ".js",
+          ".mjs",
+          ".ts",
+          ".jsx",
+          ".tsx",
+          ".py",
+          ".c",
+          ".h",
+          ".cpp",
+          ".hpp",
+          ".cc",
+          ".cs",
+          ".java",
+          ".kt",
+          ".go",
+          ".rs",
+          ".rb",
+          ".php",
+          ".swift",
+          ".sh",
+          ".bat",
+          ".ps1",
+          ".sql",
+          ".r",
+          ".m",
+          ".s",
+          ".asm",
+          ".ld",
+          ".cmake",
+          ".mk",
+          ".dts"
+        ],
+        "mimeTypes": [
+          "text/plain",
+          "text/markdown",
+          "text/csv",
+          "application/json",
+          "application/xml",
+          "text/xml",
+          "text/html",
+          "text/css",
+          "text/javascript"
+        ],
+        "maxBytes": 2097152,
+        "upstreamMime": {}
+      }
+    }
+  },
+  "memory": {
+    "enabled": true,
+    "defaultOnForNewChats": true,
+    "maxItems": 200,
+    "maxItemChars": 500,
+    "autoExtract": {
+      "enabled": true,
+      "providerId": "cleanapis",
+      "modelId": "deepseek-v4-flash-0731",
+      "maxTokens": null,
+      "temperature": null,
+      "timeoutSeconds": 60,
+      "maxAddPerTurn": 5,
+      "maxRemovePerTurn": 5,
+      "maxContextChars": 4000,
+      "contextMessages": 6
+    },
+    "archive": {
+      "enabled": true,
+      "dbFile": "memory.db",
+      "summarizeOnRemember": true,
+      "summarizer": {
+        "providerId": "cleanapis",
+        "modelId": "deepseek-v4-flash-0731",
+        "maxTokens": null,
+        "temperature": null,
+        "timeoutSeconds": 120
+      },
+      "maxTranscriptChars": 60000,
+      "embedding": {
+        "providerId": null,
+        "modelId": null,
+        "dimensions": null,
+        "batchSize": 32,
+        "maxInputChars": 8000,
+        "timeoutSeconds": 60
+      },
+      "retrieval": {
+        "topK": 4,
+        "candidates": 20,
+        "minSimilarity": 0.3,
+        "rrfK": 60,
+        "maxInjectChars": 8000,
+        "queryMessages": 2,
+        "maxQueryChars": 2000,
+        "minTokenLength": 2,
+        "maxQueryTokens": 24
+      }
+    }
+  },
+  "characters": {
+    "maxCount": 100,
+    "nameMaxLength": 80,
+    "avatarMaxLength": 8,
+    "descriptionMaxLength": 300,
+    "defaultAvatar": "🤖"
+  },
+  "prompts": {
+    "file": "config/prompts.json"
+  },
+  "settingsPanel": {
+    "file": "settings.json",
+    "sections": [
+      {
+        "id": "chat",
+        "fields": [
+          {
+            "id": "defaultModel",
+            "type": "model",
+            "kind": "chat",
+            "providerPath": "chat.defaultProviderId",
+            "modelPath": "chat.defaultModelId",
+            "allowNone": true
+          },
+          {
+            "id": "defaultTemperature",
+            "type": "number",
+            "path": "chat.defaultTemperature",
+            "min": 0,
+            "max": 2,
+            "step": 0.1,
+            "nullable": true
+          },
+          {
+            "id": "defaultSystemPrompt",
+            "type": "text",
+            "path": "chat.defaultSystemPrompt",
+            "maxLength": 20000
+          }
+        ]
+      },
+      {
+        "id": "memory",
+        "fields": [
+          {
+            "id": "enabled",
+            "type": "boolean",
+            "path": "memory.enabled"
+          },
+          {
+            "id": "defaultOnForNewChats",
+            "type": "boolean",
+            "path": "memory.defaultOnForNewChats"
+          },
+          {
+            "id": "autoExtract",
+            "type": "boolean",
+            "path": "memory.autoExtract.enabled"
+          },
+          {
+            "id": "extractModel",
+            "type": "model",
+            "kind": "chat",
+            "providerPath": "memory.autoExtract.providerId",
+            "modelPath": "memory.autoExtract.modelId",
+            "allowNone": true
+          },
+          {
+            "id": "summarizeOnRemember",
+            "type": "boolean",
+            "path": "memory.archive.summarizeOnRemember"
+          },
+          {
+            "id": "summarizerModel",
+            "type": "model",
+            "kind": "chat",
+            "providerPath": "memory.archive.summarizer.providerId",
+            "modelPath": "memory.archive.summarizer.modelId",
+            "allowNone": true
+          },
+          {
+            "id": "embeddingModel",
+            "type": "model",
+            "kind": "embedding",
+            "providerPath": "memory.archive.embedding.providerId",
+            "modelPath": "memory.archive.embedding.modelId",
+            "allowNone": true
+          },
+          {
+            "id": "topK",
+            "type": "number",
+            "path": "memory.archive.retrieval.topK",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "integer": true
+          },
+          {
+            "id": "minSimilarity",
+            "type": "number",
+            "path": "memory.archive.retrieval.minSimilarity",
+            "min": 0,
+            "max": 1,
+            "step": 0.05
+          }
+        ]
+      },
+      {
+        "id": "appearance",
+        "fields": [
+          {
+            "id": "defaultTheme",
+            "type": "select",
+            "path": "ui.defaultTheme",
+            "options": [
+              "system",
+              "light",
+              "dark"
+            ]
+          },
+          {
+            "id": "sendOnEnter",
+            "type": "boolean",
+            "path": "ui.sendOnEnter"
+          }
+        ]
+      }
+    ]
+  }
+}
