@@ -14,6 +14,12 @@ in the source.
 
 `config.json` is read once at start-up. **Restart the server after changing it.**
 
+Settings that are listed in `settingsPanel` can also be changed **in the UI** (sidebar →
+**Settings**) without a restart. They are stored as overrides in
+`<data dir>/settings.json` (`{ "<config.path>": value }`), which is not in git, so
+`git pull` never overwrites them. `config.json` stays the source of the defaults, and
+**Restore defaults** in the panel deletes the overrides.
+
 ---
 
 ## `app`
@@ -83,6 +89,7 @@ Secrets file format:
 
 | Key | Default | Description |
 |-----|---------|-------------|
+| `defaultProviderId` / `defaultModelId` | `"cleanapis"` / `"gpt-5.6-luna"` | Model preselected for new chats (panel: *Default model*). `null` = last used model, else the first available one. |
 | `defaultTemperature` | `0.7` | Temperature for new chats. `null` = do not send (provider default). |
 | `temperatureMin` / `temperatureMax` / `temperatureStep` | `0` / `2` / `0.1` | Slider range; the server clamps values to it. |
 | `defaultMaxTokens` | `null` | `max_tokens` for new chats; `null` = not sent. |
@@ -121,7 +128,7 @@ See [features.md](features.md#long-term-memory).
 | `maxItems` | `200` | Maximum stored facts; automatic extraction stops when reached. |
 | `maxItemChars` | `500` | Maximum length of one fact. |
 | `autoExtract.enabled` | `true` | Extract facts automatically after each answer (one extra API call). |
-| `autoExtract.providerId` / `modelId` | `null` / `null` | Model for extraction. Both `null` = the chat's model. |
+| `autoExtract.providerId` / `modelId` | `"cleanapis"` / `"deepseek-v4-flash-0731"` | Model for extraction. Both `null` = the chat's model. |
 | `autoExtract.maxTokens` / `temperature` | `null` / `null` | Sent only when set (some reasoning models reject `temperature`). |
 | `autoExtract.timeoutSeconds` | `60` | Abort extraction after this time. |
 | `autoExtract.maxAddPerTurn` | `5` | Maximum new facts per answer. |
@@ -138,10 +145,10 @@ See [features.md](features.md#archive-remember-this--summary-of-the-whole-conver
 | `enabled` | `true` | Enables the SQLite archive of conversation summaries. |
 | `dbFile` | `"memory.db"` | File name inside the data directory. |
 | `summarizeOnRemember` | `true` | Summarize the whole chat when the user explicitly asks to remember it. |
-| `summarizer.providerId` / `modelId` | `null` / `null` | Model that writes summaries; `null` = the chat's model. |
+| `summarizer.providerId` / `modelId` | `"cleanapis"` / `"deepseek-v4-flash-0731"` | Model that writes summaries; `null` = the chat's model. |
 | `summarizer.maxTokens` / `temperature` / `timeoutSeconds` | `null` / `null` / `120` | Request settings for summaries. |
 | `maxTranscriptChars` | `60000` | Maximum transcript length sent to the summarizer (newest messages kept). |
-| `embedding.providerId` / `modelId` | `null` / `null` | Embedding model for vector search. `null` = keyword search only. |
+| `embedding.providerId` / `modelId` | `null` / `null` | Embedding model for vector search. `null` = keyword search only. Clean APIs' public model list currently contains no embedding models. |
 | `embedding.dimensions` | `null` | Optional reduced dimensionality (only for models that support it). |
 | `embedding.batchSize` / `maxInputChars` / `timeoutSeconds` | `32` / `8000` / `60` | Embedding request settings. |
 | `retrieval.topK` | `4` | Entries added to the system prompt per message. |
@@ -151,6 +158,33 @@ See [features.md](features.md#archive-remember-this--summary-of-the-whole-conver
 | `retrieval.maxInjectChars` | `8000` | Character budget for injected entries. |
 | `retrieval.queryMessages` / `maxQueryChars` | `2` / `2000` | How many recent user messages form the search query, and its maximum length. |
 | `retrieval.minTokenLength` / `maxQueryTokens` | `2` / `24` | Keyword query building. |
+
+## `settingsPanel`
+
+Declares which settings appear in the UI's Settings panel. The form is generated from this
+list, and labels come from `ui.panel.*` in the language files.
+
+```json
+{ "id": "extractModel", "type": "model", "kind": "chat",
+  "providerPath": "memory.autoExtract.providerId", "modelPath": "memory.autoExtract.modelId", "allowNone": true }
+```
+
+| Field type | Extra keys | Value |
+|------------|-----------|-------|
+| `boolean` | `path` | `true` / `false` |
+| `number` | `path`, `min`, `max`, `step`, `integer?`, `nullable?` | number (or `null` if nullable) |
+| `text` | `path`, `maxLength` | string |
+| `select` | `path`, `options` | one of `options` (labels: `ui.panel.options.<id>.<option>`) |
+| `model` | `providerPath`, `modelPath`, `kind` (`chat` / `embedding`), `allowNone` | `{ providerId, modelId }` or `null` (label: `ui.panel.none.<id>`) |
+
+Every field needs a unique `id` and a label `ui.panel.fields.<id>` in every language, and
+an optional hint `ui.panel.hints.<id>`. `npm run check` verifies ids, config paths and
+labels. Values are validated on the server before they are applied.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `file` | `"settings.json"` | Override file inside the data directory. |
+| `sections[]` | chat, memory, appearance | `{ id, fields: [...] }`; the section title is `ui.panel.sections.<id>`. |
 
 ## `characters`
 
@@ -194,6 +228,7 @@ and vLLM.
 | `baseUrl` | API root, e.g. `https://cleanapis.com/v1`. |
 | `apiKeyEnv` | Env var holding the key (alternatively `providers.<id>.apiKey` in the secrets file). |
 | `modelsPath` / `chatPath` / `embeddingsPath` | Usually `/models`, `/chat/completions` and `/embeddings`. |
+| `embeddingModels` | `{ path, filter }`: where to list embedding models for the panel. Clean APIs: `/models` filtered on `type = embedding`. OpenRouter: `/embeddings/models`. |
 | `headers` | Extra request headers. OpenRouter uses `X-Title` (and optionally `HTTP-Referer`) for app attribution. |
 | `extraBody` | Merged into every chat request body, e.g. `{"include_reasoning": true}` or provider routing options. Values set by the app (model, messages, stream, temperature, …) take precedence. |
 | `supportsReasoningEffort` | Show the reasoning-effort setting and send `reasoning_effort`. |

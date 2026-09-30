@@ -7,6 +7,7 @@ const storage = require('./storage');
 const { providers, getProvider, listModels, buildBody, serializeBody, streamChat } = require('./providers');
 const context = require('./context');
 const archive = require('./archive');
+const settings = require('./settings');
 const features = require('./features');
 const H = require('./http');
 
@@ -99,6 +100,8 @@ function publicConfig() {
       defaultMaxTokens: C.defaultMaxTokens,
       defaultSystemPrompt: C.defaultSystemPrompt,
       reasoningEfforts: C.reasoningEfforts,
+      defaultProviderId: C.defaultProviderId,
+      defaultModelId: C.defaultModelId,
     },
     attachments: config.attachments,
     memory: {
@@ -140,12 +143,13 @@ async function login(req, res) {
 
 async function models(req, res, url) {
   const refresh = url.searchParams.get('refresh') === '1';
+  const kind = url.searchParams.get('kind') === 'embedding' ? 'embedding' : 'chat';
   const result = await Promise.all(
     providers.map(async (p) => {
       const key = secrets.providerKeys[p.id];
       if (!key) return { providerId: p.id, providerName: p.name, models: [], error: 'providerKeyMissing' };
       try {
-        return { providerId: p.id, providerName: p.name, models: await listModels(p, key, refresh) };
+        return { providerId: p.id, providerName: p.name, models: await listModels(p, key, refresh, kind) };
       } catch (err) {
         return { providerId: p.id, providerName: p.name, models: [], error: 'upstream', detail: err.message };
       }
@@ -373,6 +377,19 @@ async function route(req, res) {
   if (up && method === 'GET') return features.serveUpload(req, res, up[1]);
   if (up && method === 'DELETE') return features.deleteUpload(res, up[1]);
 
+  if (path === '/api/settings') {
+    if (method === 'GET') return H.sendJson(res, 200, { sections: settings.schema(), values: settings.values() });
+    if (method === 'PATCH' || method === 'DELETE') {
+      try {
+        const values = method === 'PATCH' ? await settings.update(await H.readJsonBody(req)) : await settings.reset();
+        return H.sendJson(res, 200, { sections: settings.schema(), values });
+      } catch (err) {
+        if (err instanceof settings.SettingError) throw new H.HttpError(400, 'invalidSetting', err.fieldId);
+        throw err;
+      }
+    }
+  }
+
   const arc = /^\/api\/memory\/archive(?:\/([^/]+))?$/.exec(path);
   if (arc) return archiveRoute(req, res, url, method, arc[1]);
 
@@ -412,7 +429,11 @@ async function route(req, res) {
 
 async function main() {
   await storage.init();
+  await settings.init(storage.dataDir); // apply panel overrides before anything reads config
   archive.init(storage.dataDir, secrets.providerKeys);
+  settings.onChange((paths) => {
+    if (paths.some((p) => p.startsWith('memory.archive.embedding.'))) archive.embeddingChanged();
+  });
   await storage.uploads.cleanup();
   setInterval(() => storage.uploads.cleanup().catch(() => {}), config.attachments.cleanupIntervalMinutes * 60e3).unref();
   if (A.enabled && !secrets.pinHash && secrets.pin) {

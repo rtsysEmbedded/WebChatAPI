@@ -80,6 +80,8 @@
     "autoGenerateSessionSecret": true
   },
   "chat": {
+    "defaultProviderId": "cleanapis",
+    "defaultModelId": "gpt-5.6-luna",
     "defaultTemperature": 0.7,
     "temperatureMin": 0,
     "temperatureMax": 2,
@@ -127,6 +129,15 @@
           "chat"
         ]
       },
+      "embeddingModels": {
+        "path": "/models",
+        "filter": {
+          "field": "type",
+          "allow": [
+            "embedding"
+          ]
+        }
+      },
       "modelFields": {
         "id": "id",
         "name": "name",
@@ -168,6 +179,10 @@
         "allow": [
           "text"
         ]
+      },
+      "embeddingModels": {
+        "path": "/embeddings/models",
+        "filter": null
       },
       "modelFields": {
         "id": "id",
@@ -323,8 +338,8 @@
     "maxItemChars": 500,
     "autoExtract": {
       "enabled": true,
-      "providerId": null,
-      "modelId": null,
+      "providerId": "cleanapis",
+      "modelId": "deepseek-v4-flash-0731",
       "maxTokens": null,
       "temperature": null,
       "timeoutSeconds": 60,
@@ -338,8 +353,8 @@
       "dbFile": "memory.db",
       "summarizeOnRemember": true,
       "summarizer": {
-        "providerId": null,
-        "modelId": null,
+        "providerId": "cleanapis",
+        "modelId": "deepseek-v4-flash-0731",
         "maxTokens": null,
         "temperature": null,
         "timeoutSeconds": 120
@@ -375,5 +390,124 @@
   },
   "prompts": {
     "file": "config/prompts.json"
+  },
+  "settingsPanel": {
+    "file": "settings.json",
+    "sections": [
+      {
+        "id": "chat",
+        "fields": [
+          {
+            "id": "defaultModel",
+            "type": "model",
+            "kind": "chat",
+            "providerPath": "chat.defaultProviderId",
+            "modelPath": "chat.defaultModelId",
+            "allowNone": true
+          },
+          {
+            "id": "defaultTemperature",
+            "type": "number",
+            "path": "chat.defaultTemperature",
+            "min": 0,
+            "max": 2,
+            "step": 0.1,
+            "nullable": true
+          },
+          {
+            "id": "defaultSystemPrompt",
+            "type": "text",
+            "path": "chat.defaultSystemPrompt",
+            "maxLength": 20000
+          }
+        ]
+      },
+      {
+        "id": "memory",
+        "fields": [
+          {
+            "id": "enabled",
+            "type": "boolean",
+            "path": "memory.enabled"
+          },
+          {
+            "id": "defaultOnForNewChats",
+            "type": "boolean",
+            "path": "memory.defaultOnForNewChats"
+          },
+          {
+            "id": "autoExtract",
+            "type": "boolean",
+            "path": "memory.autoExtract.enabled"
+          },
+          {
+            "id": "extractModel",
+            "type": "model",
+            "kind": "chat",
+            "providerPath": "memory.autoExtract.providerId",
+            "modelPath": "memory.autoExtract.modelId",
+            "allowNone": true
+          },
+          {
+            "id": "summarizeOnRemember",
+            "type": "boolean",
+            "path": "memory.archive.summarizeOnRemember"
+          },
+          {
+            "id": "summarizerModel",
+            "type": "model",
+            "kind": "chat",
+            "providerPath": "memory.archive.summarizer.providerId",
+            "modelPath": "memory.archive.summarizer.modelId",
+            "allowNone": true
+          },
+          {
+            "id": "embeddingModel",
+            "type": "model",
+            "kind": "embedding",
+            "providerPath": "memory.archive.embedding.providerId",
+            "modelPath": "memory.archive.embedding.modelId",
+            "allowNone": true
+          },
+          {
+            "id": "topK",
+            "type": "number",
+            "path": "memory.archive.retrieval.topK",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "integer": true
+          },
+          {
+            "id": "minSimilarity",
+            "type": "number",
+            "path": "memory.archive.retrieval.minSimilarity",
+            "min": 0,
+            "max": 1,
+            "step": 0.05
+          }
+        ]
+      },
+      {
+        "id": "appearance",
+        "fields": [
+          {
+            "id": "defaultTheme",
+            "type": "select",
+            "path": "ui.defaultTheme",
+            "options": [
+              "system",
+              "light",
+              "dark"
+            ]
+          },
+          {
+            "id": "sendOnEnter",
+            "type": "boolean",
+            "path": "ui.sendOnEnter"
+          }
+        ]
+      }
+    ]
   }
 }

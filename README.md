@@ -24,6 +24,8 @@ free-tier hosts (a free VM, Docker hosts, PaaS free plans) and on a Raspberry Pi
 - **Characters:** reusable personas with their own instructions, default model and
   temperature.
 - Per-chat system prompt, temperature, max tokens and reasoning effort.
+- **Settings panel** in the UI (default model, memory models, embedding model, retrieval,
+  appearance), applied without a restart. Defaults are preset for Clean APIs.
 - PIN login with scrypt hashing, signed HttpOnly session cookie, per-IP **and** global
   brute-force lockout.
 - API keys never leave the server; the browser talks only to your instance.

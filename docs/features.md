@@ -56,9 +56,10 @@ wraps it in a code block or adds text around it.
 Automatic extraction settings (`config.json → memory.autoExtract`):
 
 - `enabled`: switch it off to use manual memory only.
-- `providerId` + `modelId`: the model used for extraction. When both are `null`, the
-  chat's current model is used. A small, cheap model is recommended, for example set
-  `"providerId": "openrouter", "modelId": "<a cheap model id>"`.
+- `providerId` + `modelId`: the model used for extraction (Settings panel: *Model for
+  fact extraction*). Default: Clean APIs `deepseek-v4-flash-0731`, the cheapest listed
+  model with JSON mode ($0.000115 per 1K tokens). When both are `null`, the chat's
+  current model is used.
 - `contextMessages`: how many recent messages (yours and the assistant's) the extractor
   sees (default 6).
 - `maxContextChars`: maximum characters per message sent to the extractor (cost control).
@@ -127,7 +128,11 @@ The two rankings are merged with **Reciprocal Rank Fusion** (RRF,
 
 #### Enabling vector search
 
-Set an embedding model in `config.json`:
+Choose an embedding model in **Settings → Memory → Embedding model**. The list shows the
+embedding models your providers offer. At the time of writing, **Clean APIs' public model
+list (33 models) contains only chat models and no embedding models**, so with Clean APIs
+alone the archive uses keyword search. OpenRouter offers embedding models (for example
+`openai/text-embedding-3-small`). Alternatively set it in `config.json`:
 
 ```json
 "embedding": { "providerId": "openrouter", "modelId": "openai/text-embedding-3-small", "dimensions": null }

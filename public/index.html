@@ -18,6 +18,7 @@
   <script src="/js/models.js" defer></script>
   <script src="/js/app.js" defer></script>
   <script src="/js/features.js" defer></script>
+  <script src="/js/settings.js" defer></script>
 </head>
 <body>
   <!-- Boot / loading -->
@@ -51,6 +52,10 @@
         <button id="open-memory" class="btn ghost block side-link">
           <svg viewBox="0 0 24 24" class="icon"><path d="M12 3a7 7 0 00-4 12.7V19h8v-3.3A7 7 0 0012 3zM9 22h6"/></svg>
           <span data-i18n="sidebar.memory"></span>
+        </button>
+        <button id="open-settings" class="btn ghost block side-link">
+          <svg viewBox="0 0 24 24" class="icon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+          <span data-i18n="sidebar.settings"></span>
         </button>
         <button id="open-characters" class="btn ghost block side-link">
           <svg viewBox="0 0 24 24" class="icon"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 4.5a3.5 3.5 0 010 7M21.5 20a6.5 6.5 0 00-4-6"/></svg>
@@ -175,6 +180,24 @@
       <div class="dialog-foot">
         <button type="button" class="btn ghost" data-close data-i18n="common.cancel"></button>
         <button type="submit" id="settings-save" class="btn primary" data-i18n="common.save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings panel (form generated from config.settingsPanel) -->
+  <dialog id="panel-dialog" class="dialog wide">
+    <form method="dialog" id="panel-form" class="panel-form">
+      <div class="dialog-head">
+        <h3 data-i18n="panel.title"></h3>
+        <button type="button" class="icon-btn" data-close data-i18n-title="common.close">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="panel-body" class="dialog-body panel-body"></div>
+      <div class="dialog-foot">
+        <span class="muted tiny grow" data-i18n="panel.note"></span>
+        <button type="button" id="panel-reset" class="btn ghost danger" data-i18n="panel.reset"></button>
+        <button type="submit" class="btn primary" data-i18n="panel.save"></button>
       </div>
     </form>
   </dialog>

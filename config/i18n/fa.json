@@ -45,7 +45,8 @@
       "renamePrompt": "عنوان جدید این گفتگو:",
       "deleteConfirm": "«{title}» حذف شود؟ این کار برگشت‌پذیر نیست.",
       "memory": "حافظه",
-      "characters": "شخصیت‌ها"
+      "characters": "شخصیت‌ها",
+      "settings": "تنظیمات"
     },
     "topbar": {
       "toggleSidebar": "نمایش گفتگوها",
@@ -145,7 +146,8 @@
       "tooManyCharacters": "به حداکثر تعداد شخصیت‌ها رسیده‌اید.",
       "requestTooLarge": "حجم درخواست برای این ارائه‌دهنده بیش از حد مجاز است.",
       "archiveDisabled": "آرشیو بلندمدت در config.json غیرفعال است (memory.archive.enabled).",
-      "summaryFailed": "خلاصه‌سازی گفتگو ممکن نشد."
+      "summaryFailed": "خلاصه‌سازی گفتگو ممکن نشد.",
+      "invalidSetting": "مقدار نامعتبر برای تنظیم: {provider}"
     },
     "memory": {
       "title": "حافظه",
@@ -206,6 +208,59 @@
       "pick": "یک شخصیت برای این گفتگو انتخاب کنید",
       "editTitle": "ویرایش شخصیت",
       "newTitle": "شخصیت جدید"
+    },
+    "panel": {
+      "title": "تنظیمات",
+      "save": "ذخیره",
+      "reset": "بازگشت به پیش‌فرض‌ها",
+      "resetConfirm": "همهٔ تنظیمات به پیش‌فرض‌های config.json برگردند؟",
+      "saved": "تنظیمات ذخیره شد.",
+      "choose": "انتخاب",
+      "clear": "هیچ",
+      "note": "تغییرها فوراً اعمال و در data/settings.json ذخیره می‌شوند؛ پیش‌فرض‌ها از config/config.json خوانده می‌شوند.",
+      "sections": {
+        "chat": "چت",
+        "memory": "حافظه",
+        "appearance": "ظاهر"
+      },
+      "fields": {
+        "defaultModel": "مدل پیش‌فرض برای گفتگوهای جدید",
+        "defaultTemperature": "دمای پیش‌فرض",
+        "defaultSystemPrompt": "پرامپت سیستمی پیش‌فرض",
+        "enabled": "حافظهٔ بلندمدت فعال باشد",
+        "defaultOnForNewChats": "حافظه برای گفتگوهای جدید روشن باشد",
+        "autoExtract": "استخراج خودکار واقعیت‌ها بعد از هر پاسخ",
+        "extractModel": "مدل استخراج واقعیت‌ها",
+        "summarizeOnRemember": "وقتی می‌گویم «یادت بمونه»، کل گفتگو خلاصه شود",
+        "summarizerModel": "مدل خلاصه‌سازی گفتگو",
+        "embeddingModel": "مدل embedding (جستجوی وکتوری)",
+        "topK": "تعداد گفتگوهای ذخیره‌شده که به هر پیام اضافه می‌شود",
+        "minSimilarity": "حداقل شباهت برای نتیجه‌های وکتوری",
+        "defaultTheme": "پوستهٔ پیش‌فرض",
+        "sendOnEnter": "ارسال با Enter (Shift+Enter = خط جدید)"
+      },
+      "hints": {
+        "extractModel": "یک مدل ارزان با پشتیبانی JSON کافی است؛ بعد از هر پاسخ یک بار اجرا می‌شود.",
+        "summarizerModel": "فقط وقتی اجرا می‌شود که بخواهید گفتگو به خاطر سپرده شود یا دکمهٔ نشانک را بزنید.",
+        "embeddingModel": "بدون مدل embedding، گفتگوهای ذخیره‌شده با جستجوی کلیدواژه‌ای (BM25) پیدا می‌شوند. با تغییر آن، همهٔ موارد در پس‌زمینه دوباره وکتور می‌شوند.",
+        "defaultTemperature": "خالی = ارسال نشود (پیش‌فرض ارائه‌دهنده).",
+        "minSimilarity": "شباهت کسینوسی، بین ۰ و ۱. عدد بزرگ‌تر = نتیجه‌های کمتر ولی نزدیک‌تر."
+      },
+      "none": {
+        "defaultModel": "هیچ — آخرین مدل استفاده‌شده یا اولین مدل موجود",
+        "extractModel": "همان مدل گفتگو",
+        "summarizerModel": "همان مدل گفتگو",
+        "embeddingModel": "هیچ — فقط جستجوی کلیدواژه‌ای"
+      },
+      "options": {
+        "defaultTheme": {
+          "system": "سیستم",
+          "light": "روشن",
+          "dark": "تیره"
+        }
+      },
+      "embeddingModelsTitle": "انتخاب مدل embedding",
+      "noEmbeddingModels": "این ارائه‌دهنده هیچ مدل embedding ارائه نمی‌کند."
     }
   },
   "server": {
@@ -232,7 +287,9 @@
       "memoryExtractParse": "استخراج حافظه JSON قابل‌استفاده برنگرداند: {answer}",
       "embeddingError": "درخواست embedding ناموفق بود: {error}",
       "reindexStart": "در حال ساخت وکتور برای {count} مورد حافظه با {model}…",
-      "reindexDone": "وکتور {count} مورد حافظه ساخته شد"
+      "reindexDone": "وکتور {count} مورد حافظه ساخته شد",
+      "settingsReadError": "خواندن فایل تنظیمات {file} ممکن نشد: {error}",
+      "settingsLoaded": "{count} تنظیم از {file} اعمال شد"
     },
     "errors": {
       "upstream": "خطای ارائه‌دهنده {status}: {message}",

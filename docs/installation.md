@@ -144,7 +144,7 @@ because each session token carries a keyed fingerprint of the PIN credential.
 Everything worth keeping is in two places:
 
 - `data/` (or `WCA_DATA_DIR`): `index.json`, `conversations/`, `uploads/`, `memory.json`,
-  `memory.db` (+ `memory.db-wal`, `memory.db-shm`), `characters.json`
+  `memory.db` (+ `memory.db-wal`, `memory.db-shm`), `characters.json`, `settings.json`
 - the secrets file
 
 JSON files are written atomically (temp file + rename). For a consistent copy of the

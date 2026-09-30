@@ -12,6 +12,7 @@ index.html + js/*.js  ── JSON ─▶  index.js  (router, auth gate)
                                   ├─ features.js   uploads, memory and character endpoints
                                   ├─ extract.js    PDF / DOCX / text extraction
                                   ├─ archive.js    SQLite archive: FTS5 (BM25) + vectors, RRF search
+                                  ├─ settings.js   runtime settings (panel) → data/settings.json
                                   ├─ providers.js  ── HTTPS + Bearer key ─▶ /models
                                   │                ◀── SSE (OpenAI format) ─ /chat/completions
                                   ├─ http.js       body parsing, static files, headers
@@ -49,6 +50,7 @@ server/
   features.js            uploads, memory and character HTTP handlers
   extract.js             text extraction (pdfjs-dist, mammoth)
   archive.js             long-term archive (node:sqlite, FTS5, embeddings, hybrid search)
+  settings.js            settings panel: schema validation, runtime overrides
   storage.js             persistence (atomic writes, index, uploads, list stores)
   http.js                HTTP helpers, static files, security headers
   cli/set-pin.js         `npm run set-pin`
@@ -62,7 +64,8 @@ public/
   js/models.js           model picker dialog
   js/app.js              application state, sidebar, chat, composer, attachments
   js/features.js         memory manager and character editor dialogs
-data/                    (git-ignored) index.json, conversations/, uploads/, memory.json, memory.db, characters.json
+  js/settings.js         settings panel (form generated from the schema)
+data/                    (git-ignored) index.json, conversations/, uploads/, memory.json, memory.db, characters.json, settings.json
 ```
 
 ## HTTP API
@@ -84,7 +87,8 @@ the UI translates `<code>` via `ui.errors.<code>`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/models[?refresh=1]` | `[{ providerId, providerName, models: Model[], error?, detail? }]` |
+| GET / PATCH / DELETE | `/api/settings` | `{ sections, values }`. PATCH `{ fieldId: value, … }` validates and applies immediately (`400 invalidSetting` with the field id as `detail`); DELETE restores the `config.json` defaults. |
+| GET | `/api/models[?refresh=1][&kind=embedding]` | `[{ providerId, providerName, models: Model[], error?, detail? }]` |
 | GET | `/api/conversations` | Summaries, pinned first, then newest first. |
 | POST | `/api/conversations` | Create. Body: `providerId`, `modelId` (required), `systemPrompt`, `temperature`, `maxTokens`, `reasoningEffort`. |
 | GET | `/api/conversations/:id` | Full conversation including messages. |

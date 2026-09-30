@@ -255,9 +255,13 @@ window.App = (() => {
     const chat = state.cfg.chat;
     let last = null;
     try { last = JSON.parse(storeGet(STORE.model) || 'null'); } catch { /* ignore */ }
+    // Default model from the settings panel first, then the last used one.
+    const preferred = chat.defaultProviderId && chat.defaultModelId
+      ? { providerId: chat.defaultProviderId, modelId: chat.defaultModelId }
+      : last;
     return {
-      providerId: last ? last.providerId : null,
-      modelId: last ? last.modelId : null,
+      providerId: preferred ? preferred.providerId : null,
+      modelId: preferred ? preferred.modelId : null,
       systemPrompt: chat.defaultSystemPrompt,
       temperature: chat.defaultTemperature,
       maxTokens: chat.defaultMaxTokens,
@@ -862,6 +866,7 @@ window.App = (() => {
       appStarted = true;
       Models.init(state.cfg);
       Features.init(state.cfg);
+      Settings.init();
       window.addEventListener('hashchange', route);
     }
     await Features.loadCharacters().catch(toastError);
@@ -891,6 +896,7 @@ window.App = (() => {
     $('attach-button').addEventListener('click', () => $('file-input').click());
     $('file-input').accept = fileAccept();
     $('save-chat').addEventListener('click', saveChatToMemory);
+    $('open-settings').addEventListener('click', () => { closeSidebar(); Settings.open(); });
     $('open-memory').addEventListener('click', () => { closeSidebar(); Features.openMemory(); });
     $('open-characters').addEventListener('click', () => { closeSidebar(); Features.openCharacters(); });
     $('file-input').addEventListener('change', (e) => { addFiles([...e.target.files]); e.target.value = ''; });
@@ -967,5 +973,21 @@ window.App = (() => {
 
   document.addEventListener('DOMContentLoaded', boot);
 
-  return { toast, toastError, el, iconButton, ask, onCharactersChanged };
+  // Re-read the public config after the settings panel saved changes. The
+  // object is updated in place because Models/Features hold a reference to it.
+  async function reloadConfig() {
+    const fresh = await Api.get('/api/public-config');
+    for (const key of Object.keys(fresh)) state.cfg[key] = fresh[key];
+    applyTheme(currentTheme());
+    $('theme-select').value = currentTheme();
+    if (!state.current) {
+      state.draft = newDraft();
+      ensureDraftModel();
+      renderCharacterPicker();
+    }
+    updateModelLabel();
+    updateSaveButton();
+  }
+
+  return { toast, toastError, el, iconButton, ask, onCharactersChanged, reloadConfig };
 })();

@@ -39,13 +39,13 @@ function normalizeModel(p, raw) {
   };
 }
 
-function passesFilter(p, raw) {
-  if (!p.modelFilter) return true;
-  // Keep the model when the field is absent, equals an allowed value, or (for
-  // array fields) contains at least one allowed value.
-  const v = pick(raw, p.modelFilter.field);
+// Keep the model when there is no filter, the field is absent, the field
+// equals an allowed value, or (for array fields) contains an allowed value.
+function passesFilter(filter, raw) {
+  if (!filter) return true;
+  const v = pick(raw, filter.field);
   if (v === undefined) return true;
-  return Array.isArray(v) ? v.some((x) => p.modelFilter.allow.includes(x)) : p.modelFilter.allow.includes(v);
+  return Array.isArray(v) ? v.some((x) => filter.allow.includes(x)) : filter.allow.includes(v);
 }
 
 function headersFor(p, apiKey) {
@@ -62,19 +62,23 @@ async function upstreamError(res) {
   }
 }
 
-async function listModels(p, apiKey, refresh = false) {
-  const cached = modelCache.get(p.id);
+// kind: 'chat' (modelsPath + modelFilter) or 'embedding' (embeddingModels).
+async function listModels(p, apiKey, refresh = false, kind = 'chat') {
+  const cacheKey = `${p.id}:${kind}`;
+  const cached = modelCache.get(cacheKey);
   if (!refresh && cached && Date.now() - cached.at < p.modelsCacheMinutes * 60e3) return cached.models;
-  const res = await fetch(p.baseUrl + p.modelsPath, { headers: headersFor(p, apiKey) });
+  const source = kind === 'embedding' ? p.embeddingModels : { path: p.modelsPath, filter: p.modelFilter };
+  if (!source) return [];
+  const res = await fetch(p.baseUrl + source.path, { headers: headersFor(p, apiKey) });
   if (!res.ok) throw new Error(t('server.errors.upstream', { status: res.status, message: await upstreamError(res) }));
   const body = await res.json();
   const rawList = Array.isArray(body) ? body : body.data || [];
   const models = rawList
-    .filter((m) => passesFilter(p, m))
+    .filter((m) => passesFilter(source.filter, m))
     .map((m) => normalizeModel(p, m))
-    .concat(p.staticModels.map((m) => normalizeModel(p, m)))
+    .concat(kind === 'chat' ? p.staticModels.map((m) => normalizeModel(p, m)) : [])
     .sort((a, b) => a.name.localeCompare(b.name));
-  modelCache.set(p.id, { at: Date.now(), models });
+  modelCache.set(cacheKey, { at: Date.now(), models });
   return models;
 }
 

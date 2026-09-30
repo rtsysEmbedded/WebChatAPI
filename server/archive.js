@@ -94,6 +94,20 @@ function init(dataDir, providerKeys) {
   reindex(); // background: embed entries that have no vector for the current model
 }
 
+// Called when the embedding model setting changes at runtime: load the
+// vectors made with the new model and embed everything else.
+function embeddingChanged() {
+  if (!db) return;
+  vectors.clear();
+  const current = modelKey();
+  if (current) {
+    for (const row of db.prepare('SELECT id, embedding FROM entries WHERE embedModel = ?').all(current)) {
+      vectors.set(row.id, blobToVector(row.embedding));
+    }
+  }
+  reindex();
+}
+
 function enabled() {
   return !!db;
 }
@@ -308,6 +322,7 @@ async function search(text, { excludeConversationId = null, topK = R.topK } = {}
 module.exports = {
   init,
   enabled,
+  embeddingChanged,
   upsertConversation,
   get,
   list,

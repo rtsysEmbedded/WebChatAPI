@@ -45,7 +45,8 @@
       "renamePrompt": "New title for this chat:",
       "deleteConfirm": "Delete \"{title}\"? This cannot be undone.",
       "memory": "Memory",
-      "characters": "Characters"
+      "characters": "Characters",
+      "settings": "Settings"
     },
     "topbar": {
       "toggleSidebar": "Show chats",
@@ -145,7 +146,8 @@
       "tooManyCharacters": "Maximum number of characters reached.",
       "requestTooLarge": "The request is too large for this provider.",
       "archiveDisabled": "Long-term archive is disabled in config.json (memory.archive.enabled).",
-      "summaryFailed": "Could not summarize the conversation."
+      "summaryFailed": "Could not summarize the conversation.",
+      "invalidSetting": "Invalid value for setting: {provider}"
     },
     "memory": {
       "title": "Memory",
@@ -206,6 +208,59 @@
       "pick": "Choose a character for this chat",
       "editTitle": "Edit character",
       "newTitle": "New character"
+    },
+    "panel": {
+      "title": "Settings",
+      "save": "Save",
+      "reset": "Restore defaults",
+      "resetConfirm": "Restore all settings to the defaults from config.json?",
+      "saved": "Settings saved.",
+      "choose": "Choose",
+      "clear": "None",
+      "note": "Changes apply immediately and are stored in data/settings.json; defaults come from config/config.json.",
+      "sections": {
+        "chat": "Chat",
+        "memory": "Memory",
+        "appearance": "Appearance"
+      },
+      "fields": {
+        "defaultModel": "Default model for new chats",
+        "defaultTemperature": "Default temperature",
+        "defaultSystemPrompt": "Default system prompt",
+        "enabled": "Long-term memory enabled",
+        "defaultOnForNewChats": "Memory on for new chats",
+        "autoExtract": "Extract facts automatically after each answer",
+        "extractModel": "Model for fact extraction",
+        "summarizeOnRemember": "Summarize the whole chat when I say \"remember\"",
+        "summarizerModel": "Model for conversation summaries",
+        "embeddingModel": "Embedding model (vector search)",
+        "topK": "Saved conversations added per message",
+        "minSimilarity": "Minimum similarity for vector matches",
+        "defaultTheme": "Default theme",
+        "sendOnEnter": "Send with Enter (Shift+Enter = new line)"
+      },
+      "hints": {
+        "extractModel": "A cheap model with JSON support is enough; it runs once after every answer.",
+        "summarizerModel": "Runs only when you ask to remember a chat or press the bookmark button.",
+        "embeddingModel": "Without an embedding model, saved conversations are found by keyword search (BM25). Changing it re-embeds all entries in the background.",
+        "defaultTemperature": "Empty = do not send (provider default).",
+        "minSimilarity": "Cosine similarity, 0–1. Higher = fewer but closer matches."
+      },
+      "none": {
+        "defaultModel": "None — last used or first available",
+        "extractModel": "Same as the chat's model",
+        "summarizerModel": "Same as the chat's model",
+        "embeddingModel": "None — keyword search only"
+      },
+      "options": {
+        "defaultTheme": {
+          "system": "System",
+          "light": "Light",
+          "dark": "Dark"
+        }
+      },
+      "embeddingModelsTitle": "Select an embedding model",
+      "noEmbeddingModels": "This provider lists no embedding models."
     }
   },
   "server": {
@@ -232,7 +287,9 @@
       "memoryExtractParse": "Memory extraction returned no usable JSON: {answer}",
       "embeddingError": "Embedding request failed: {error}",
       "reindexStart": "Embedding {count} memory entries with {model}…",
-      "reindexDone": "Embedded {count} memory entries"
+      "reindexDone": "Embedded {count} memory entries",
+      "settingsReadError": "Could not read settings file {file}: {error}",
+      "settingsLoaded": "Applied {count} settings from {file}"
     },
     "errors": {
       "upstream": "Upstream error {status}: {message}",

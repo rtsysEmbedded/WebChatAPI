@@ -4,7 +4,10 @@
 // /models endpoint via the backend (cached there).
 window.Models = (() => {
   const { t } = window.I18n;
-  let groups = []; // [{ providerId, providerName, models, error, detail }]
+  // Catalogues per kind: [{ providerId, providerName, models, error, detail }]
+  const catalogs = { chat: [], embedding: [] };
+  let kind = 'chat'; // kind shown in the open dialog
+  let groups = catalogs.chat;
   let cfg = null;
   let onSelect = null;
   let current = null; // { providerId, modelId }
@@ -20,35 +23,38 @@ window.Models = (() => {
     $('model-search').addEventListener('input', () => { focusIndex = -1; renderList(); });
     $('filter-vision').addEventListener('change', renderList);
     $('models-refresh').addEventListener('click', async () => {
-      await load(true);
+      await load(true, kind);
       renderTabs();
       renderList();
     });
     $('model-search').addEventListener('keydown', onKey);
   }
 
-  async function load(refresh = false) {
+  async function load(refresh = false, k = 'chat') {
     $('model-list').innerHTML = '';
     const note = document.createElement('div');
     note.className = 'notice';
     note.textContent = t('models.loading');
     $('model-list').append(note);
-    groups = await Api.get(`/api/models${refresh ? '?refresh=1' : ''}`);
-    return groups;
+    const params = new URLSearchParams({ kind: k });
+    if (refresh) params.set('refresh', '1');
+    catalogs[k] = await Api.get(`/api/models?${params}`);
+    if (k === kind) groups = catalogs[k];
+    return catalogs[k];
   }
 
-  function find(providerId, modelId) {
-    const g = groups.find((x) => x.providerId === providerId);
+  function find(providerId, modelId, k = 'chat') {
+    const g = catalogs[k].find((x) => x.providerId === providerId);
     return g ? g.models.find((m) => m.id === modelId) || null : null;
   }
 
   function providerName(providerId) {
-    const g = groups.find((x) => x.providerId === providerId);
+    const g = catalogs.chat.find((x) => x.providerId === providerId) || catalogs.embedding.find((x) => x.providerId === providerId);
     return g ? g.providerName : providerId;
   }
 
   function firstAvailable() {
-    for (const g of groups) if (g.models.length) return { providerId: g.providerId, modelId: g.models[0].id };
+    for (const g of catalogs.chat) if (g.models.length) return { providerId: g.providerId, modelId: g.models[0].id };
     return null;
   }
 
@@ -118,7 +124,7 @@ window.Models = (() => {
       if (!models.length) {
         const n = document.createElement('div');
         n.className = 'notice';
-        n.textContent = t('models.noResults');
+        n.textContent = t(kind === 'embedding' && !g.models.length ? 'panel.noEmbeddingModels' : 'models.noResults');
         list.append(n);
         continue;
       }
@@ -203,19 +209,24 @@ window.Models = (() => {
     if (onSelect) onSelect({ providerId, modelId });
   }
 
-  async function open(selection, callback) {
+  // options.kind: 'chat' (default) or 'embedding'.
+  async function open(selection, callback, options = {}) {
+    kind = options.kind || 'chat';
+    groups = catalogs[kind];
+    activeTab = 'all';
     current = selection;
     onSelect = callback;
+    dialog.querySelector('.dialog-head h3').textContent = t(kind === 'embedding' ? 'panel.embeddingModelsTitle' : 'models.title');
     $('model-search').value = '';
     focusIndex = -1;
     dialog.showModal();
     $('model-search').focus();
     if (!groups.length) {
-      try { await load(); } catch (err) { window.App.toastError(err); }
+      try { await load(false, kind); } catch (err) { window.App.toastError(err); }
     }
     renderTabs();
     renderList();
   }
 
-  return { init, load, open, find, providerName, firstAvailable, formatPrice, get groups() { return groups; } };
+  return { init, load, open, find, providerName, firstAvailable, formatPrice, get groups() { return catalogs.chat; } };
 })();

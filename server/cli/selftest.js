@@ -6,7 +6,7 @@
 const assert = require('assert');
 const { config, i18n } = require('../config');
 const auth = require('../auth');
-const { normalizeModel, sseJson } = require('../providers');
+const { normalizeModel, sseJson, passesFilter } = require('../providers');
 const { classify } = require('../features');
 const { prompts, fill } = require('../config');
 
@@ -66,6 +66,12 @@ async function main() {
   const m3 = normalizeModel(or, { id: 'v', architecture: { input_modalities: ['text', 'video'] } });
   assert.ok(m3.video && !m3.vision);
 
+  // Model filters: scalar, array and absent fields.
+  assert.ok(passesFilter({ field: 'type', allow: ['embedding'] }, { type: 'embedding' }));
+  assert.ok(!passesFilter({ field: 'type', allow: ['embedding'] }, { type: 'chat' }));
+  assert.ok(passesFilter({ field: 'a.b', allow: ['text'] }, { a: { b: ['image', 'text'] } }));
+  assert.ok(passesFilter(null, {}));
+
   // Attachment classification: extension first, then MIME type.
   assert.strictEqual(classify('main.c', ''), 'text');
   assert.strictEqual(classify('Report.PDF', 'application/octet-stream'), 'pdf');
@@ -95,6 +101,36 @@ async function main() {
   const out = [];
   for await (const j of sseJson(chunks)) out.push(j.a);
   assert.deepStrictEqual(out, [1, 2]);
+
+  // Settings panel schema: unique ids, existing config paths, labels in
+  // every language, and validation of bad values.
+  const settings = require('../settings');
+  const fieldIds = settings.fields.map((f) => f.id);
+  assert.strictEqual(new Set(fieldIds).size, fieldIds.length);
+  const getPath = (o, p) => p.split('.').reduce((x, k) => (x == null ? undefined : x[k]), o);
+  for (const f of settings.fields) {
+    const ps = f.type === 'model' ? [f.providerPath, f.modelPath] : [f.path];
+    for (const p of ps) assert.notStrictEqual(getPath(config, p), undefined, `missing config path ${p}`);
+    for (const [lang, data] of Object.entries(i18n)) {
+      assert.ok(data.ui.panel.fields[f.id], `${lang}: missing ui.panel.fields.${f.id}`);
+      if (f.type === 'model' && f.allowNone) assert.ok(data.ui.panel.none[f.id], `${lang}: missing ui.panel.none.${f.id}`);
+      for (const opt of f.options || []) assert.ok(data.ui.panel.options[f.id][opt], `${lang}: missing option ${f.id}.${opt}`);
+    }
+  }
+  {
+    const tmpS = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'wca-settings-'));
+    await settings.init(tmpS);
+    const before = config.memory.archive.retrieval.topK;
+    await assert.rejects(settings.update({ topK: 999 }), settings.SettingError);
+    await assert.rejects(settings.update({ extractModel: { providerId: 'nope', modelId: 'x' } }), settings.SettingError);
+    await assert.rejects(settings.update({ unknownField: 1 }), settings.SettingError);
+    const v = await settings.update({ topK: 7, extractModel: null });
+    assert.strictEqual(config.memory.archive.retrieval.topK, 7);
+    assert.strictEqual(v.extractModel, null);
+    await settings.reset();
+    assert.strictEqual(config.memory.archive.retrieval.topK, before);
+    require('fs').rmSync(tmpS, { recursive: true, force: true });
+  }
 
   // Archive: FTS query sanitising, RRF, and a real SQLite round trip
   // (keyword mode, temporary directory).
