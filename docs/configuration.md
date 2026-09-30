@@ -9,7 +9,7 @@ in the source.
 | `config/i18n/<lang>.json` | All UI text, server log lines, CLI messages | yes |
 | `config/secrets.json` | PIN hash, session secret, optional API keys | **no** (git-ignored) |
 | `config/secrets.example.json` | Template for the secrets file | yes |
-| `.env` (Docker only) | Environment variables for `docker compose` | **no** |
+| `.env` | Environment variables (API keys, `PORT`, PIN) for `npm start` and `docker compose` | **no** |
 
 `config.json` is read once at start-up. **Restart the server after changing it.**
 
@@ -62,6 +62,7 @@ in the source.
 | Key | Default | Description |
 |-----|---------|-------------|
 | `file` / `fileEnv` | `"config/secrets.json"` / `"WCA_SECRETS_FILE"` | Location of the secrets file. |
+| `envFile` | `".env"` | Env file loaded into `process.env` at start-up (relative paths are resolved from the project root). Existing environment variables are not overridden; a missing file is ignored. Set to `null` to disable. |
 | `env.pin` | `"WCA_PIN"` | Env var holding a plain PIN. |
 | `env.pinHash` | `"WCA_PIN_HASH"` | Env var holding a PIN hash. |
 | `env.sessionSecret` | `"WCA_SESSION_SECRET"` | Env var holding the session signing secret. |

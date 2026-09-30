@@ -1,14 +1,30 @@
 {
-  "meta": { "name": "فارسی", "dir": "rtl", "locale": "fa" },
+  "meta": {
+    "name": "فارسی",
+    "dir": "rtl",
+    "locale": "fa"
+  },
   "ui": {
-    "languages": { "en": "English", "fa": "فارسی" },
-    "common": { "close": "بستن", "cancel": "انصراف", "save": "ذخیره", "ok": "تأیید" },
+    "languages": {
+      "en": "English",
+      "fa": "فارسی"
+    },
+    "common": {
+      "close": "بستن",
+      "cancel": "انصراف",
+      "save": "ذخیره",
+      "ok": "تأیید"
+    },
     "login": {
       "subtitle": "برای ادامه، PIN خود را وارد کنید",
       "placeholder": "PIN",
       "submit": "ورود"
     },
-    "theme": { "system": "سیستم", "light": "روشن", "dark": "تیره" },
+    "theme": {
+      "system": "سیستم",
+      "light": "روشن",
+      "dark": "تیره"
+    },
     "sidebar": {
       "newChat": "گفتگوی جدید",
       "search": "جستجو در گفتگوها",
@@ -29,7 +45,10 @@
       "renamePrompt": "عنوان جدید این گفتگو:",
       "deleteConfirm": "«{title}» حذف شود؟ این کار برگشت‌پذیر نیست."
     },
-    "topbar": { "toggleSidebar": "نمایش گفتگوها", "chatSettings": "تنظیمات گفتگو" },
+    "topbar": {
+      "toggleSidebar": "نمایش گفتگوها",
+      "chatSettings": "تنظیمات گفتگو"
+    },
     "chat": {
       "emptyTitle": "امروز چطور می‌توانم کمکتان کنم؟",
       "emptyHint": "از بالای صفحه یک مدل انتخاب کنید و شروع به نوشتن کنید.",
@@ -77,7 +96,12 @@
       "maxTokens": "حداکثر توکن خروجی",
       "maxTokensHint": "خالی = پیش‌فرض ارائه‌دهنده",
       "reasoningEffort": "میزان استدلال",
-      "effort": { "default": "پیش‌فرض", "low": "کم", "medium": "متوسط", "high": "زیاد" }
+      "effort": {
+        "default": "پیش‌فرض",
+        "low": "کم",
+        "medium": "متوسط",
+        "high": "زیاد"
+      }
     },
     "errors": {
       "internal": "مشکلی پیش آمد.",
@@ -117,7 +141,10 @@
       "pinMissing": "PIN تنظیم نشده است. \"npm run set-pin\" را اجرا کنید یا WCA_PIN / WCA_PIN_HASH را تنظیم کنید. تا آن زمان ورود ممکن نیست.",
       "providerKeyMissing": "ارائه‌دهندهٔ «{provider}» کلید API ندارد ({env} را تنظیم کنید یا آن را به فایل اسرار اضافه کنید).",
       "unhandled": "خطای مدیریت‌نشده: {error}",
-      "fatal": "خطای بحرانی: {error}"
+      "fatal": "خطای بحرانی: {error}",
+      "envLoaded": "متغیرهای محیطی از {file} بارگذاری شد",
+      "envReadError": "خواندن فایل env در {file} ممکن نشد: {error}",
+      "envUnsupported": "این نسخهٔ Node.js نمی‌تواند {file} را بارگذاری کند؛ از Node.js 20.12 یا جدیدتر استفاده کنید یا متغیرها را در shell تنظیم کنید."
     },
     "errors": {
       "upstream": "خطای ارائه‌دهنده {status}: {message}"

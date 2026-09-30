@@ -70,6 +70,7 @@
   "secrets": {
     "file": "config/secrets.json",
     "fileEnv": "WCA_SECRETS_FILE",
+    "envFile": ".env",
     "env": {
       "pin": "WCA_PIN",
       "pinHash": "WCA_PIN_HASH",

@@ -27,14 +27,13 @@ free-tier hosts (a free VM, Docker hosts, PaaS free plans) and on a Raspberry Pi
 
 ## Quick start
 
-Requirements: Node.js ≥ 20.
+Requirements: Node.js ≥ 20.12.
 
 ```bash
 git clone <this repo> webchatapi && cd webchatapi
 npm ci --omit=dev
 npm run set-pin                       # choose your PIN (stored as a scrypt hash)
-export CLEANAPIS_API_KEY=cc_...       # at least one provider key
-export OPENROUTER_API_KEY=sk-or-...
+cp .env.example .env                  # put your API keys (and optionally PORT) in .env
 npm start                             # http://localhost:3000
 ```
 

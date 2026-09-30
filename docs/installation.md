@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Node.js 20 or newer** (uses the built-in `fetch`, Web Streams and `crypto.randomUUID`).
+- **Node.js 20.12 or newer** (uses the built-in `fetch`, Web Streams, `crypto.randomUUID` and `process.loadEnvFile`).
 - An API key for at least one provider:
   - Clean APIs: keys look like `cc_` + 48 characters. See <https://cleanapis.com/docs/authentication>.
   - OpenRouter: keys look like `sk-or-...`. Create one at <https://openrouter.ai/keys>.
@@ -50,7 +50,28 @@ Precedence: `WCA_PIN_HASH` → `pinHash` in the secrets file → `WCA_PIN`.
 
 ## 3. Provide API keys
 
-Either as environment variables (names are configured per provider via `apiKeyEnv`):
+The simplest way is a `.env` file in the project root. It is loaded automatically at
+start-up by both `npm start` and Docker Compose, and git ignores it:
+
+```bash
+cp .env.example .env
+# then edit .env:
+CLEANAPIS_API_KEY=cc_...
+OPENROUTER_API_KEY=sk-or-...
+PORT=3000
+```
+
+Rules:
+
+- The file location comes from `secrets.envFile` in `config/config.json` (default
+  `.env`, relative to the project root, not to the current directory).
+- Variables already set in the shell or by the host **override** values in `.env`.
+- A missing `.env` is not an error.
+- Loading uses Node's built-in `process.loadEnvFile` (Node.js ≥ 20.12). On startup the
+  log shows `Loaded environment variables from …/.env` when the file was read.
+
+Alternatively, set them as environment variables in the shell (names are configured per
+provider via `apiKeyEnv`):
 
 ```bash
 export CLEANAPIS_API_KEY=cc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -69,7 +90,7 @@ or in the secrets file (see `config/secrets.example.json`):
 }
 ```
 
-Environment variables take precedence over the file. A provider without a key still
+Precedence: shell/host environment → `.env` → secrets file. A provider without a key still
 appears in the model picker, with a message that its key is missing.
 
 ## 4. Start

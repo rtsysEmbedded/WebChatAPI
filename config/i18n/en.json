@@ -1,14 +1,30 @@
 {
-  "meta": { "name": "English", "dir": "ltr", "locale": "en" },
+  "meta": {
+    "name": "English",
+    "dir": "ltr",
+    "locale": "en"
+  },
   "ui": {
-    "languages": { "en": "English", "fa": "فارسی" },
-    "common": { "close": "Close", "cancel": "Cancel", "save": "Save", "ok": "OK" },
+    "languages": {
+      "en": "English",
+      "fa": "فارسی"
+    },
+    "common": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save",
+      "ok": "OK"
+    },
     "login": {
       "subtitle": "Enter your PIN to continue",
       "placeholder": "PIN",
       "submit": "Unlock"
     },
-    "theme": { "system": "System", "light": "Light", "dark": "Dark" },
+    "theme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "sidebar": {
       "newChat": "New chat",
       "search": "Search chats",
@@ -29,7 +45,10 @@
       "renamePrompt": "New title for this chat:",
       "deleteConfirm": "Delete \"{title}\"? This cannot be undone."
     },
-    "topbar": { "toggleSidebar": "Show chats", "chatSettings": "Chat settings" },
+    "topbar": {
+      "toggleSidebar": "Show chats",
+      "chatSettings": "Chat settings"
+    },
     "chat": {
       "emptyTitle": "How can I help you today?",
       "emptyHint": "Pick a model at the top and start typing.",
@@ -77,7 +96,12 @@
       "maxTokens": "Max output tokens",
       "maxTokensHint": "Empty = provider default",
       "reasoningEffort": "Reasoning effort",
-      "effort": { "default": "Default", "low": "Low", "medium": "Medium", "high": "High" }
+      "effort": {
+        "default": "Default",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      }
     },
     "errors": {
       "internal": "Something went wrong.",
@@ -117,7 +141,10 @@
       "pinMissing": "No PIN configured. Run \"npm run set-pin\" or set WCA_PIN / WCA_PIN_HASH. Login is impossible until then.",
       "providerKeyMissing": "Provider \"{provider}\" has no API key (set {env} or add it to the secrets file).",
       "unhandled": "Unhandled error: {error}",
-      "fatal": "Fatal error: {error}"
+      "fatal": "Fatal error: {error}",
+      "envLoaded": "Loaded environment variables from {file}",
+      "envReadError": "Could not read env file {file}: {error}",
+      "envUnsupported": "This Node.js version cannot load {file}; use Node.js 20.12 or newer, or set the variables in your shell."
     },
     "errors": {
       "upstream": "Upstream error {status}: {message}"

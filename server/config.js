@@ -40,6 +40,25 @@ function log(key, vars) {
   console.log(`[${new Date().toISOString()}] ${t(key, vars)}`);
 }
 
+// Load the .env file (path from config.secrets.envFile) into process.env.
+// Variables already set in the real environment take precedence; a missing
+// file is not an error. Runs at require time, before anything reads process.env.
+function loadEnvFile() {
+  if (!config.secrets.envFile) return;
+  const file = resolvePath(config.secrets.envFile);
+  if (typeof process.loadEnvFile !== 'function') {
+    if (fs.existsSync(file)) log('server.log.envUnsupported', { file });
+    return;
+  }
+  try {
+    process.loadEnvFile(file);
+    log('server.log.envLoaded', { file });
+  } catch (err) {
+    if (err.code !== 'ENOENT') log('server.log.envReadError', { file, error: err.message });
+  }
+}
+loadEnvFile();
+
 const secretsFile = resolvePath(process.env[config.secrets.fileEnv] || config.secrets.file);
 
 function loadSecretsFile() {
