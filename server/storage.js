@@ -259,4 +259,4 @@ const uploads = {
   },
 };
 
-module.exports = { init, list, get, save, remove, exists, newId, isId, memory, characters, uploads };
+module.exports = { init, list, get, save, remove, exists, newId, isId, memory, characters, uploads, dataDir };

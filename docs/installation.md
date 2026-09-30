@@ -22,7 +22,8 @@ Runtime dependencies:
   sanitising), `@highlightjs/cdn-assets` (code highlighting).
 - Server-side text extraction for uploads: `pdfjs-dist` (PDF) and `mammoth` (DOCX).
 
-Everything else uses Node.js built-ins.
+Everything else uses Node.js built-ins, including `node:sqlite` for the long-term memory
+archive (marked experimental in Node.js 22; `npm start` hides the warning).
 
 ## 2. Set the PIN
 
@@ -143,8 +144,8 @@ because each session token carries a keyed fingerprint of the PIN credential.
 Everything worth keeping is in two places:
 
 - `data/` (or `WCA_DATA_DIR`): `index.json`, `conversations/`, `uploads/`, `memory.json`,
-  `characters.json`
+  `memory.db` (+ `memory.db-wal`, `memory.db-shm`), `characters.json`
 - the secrets file
 
-Copy them while the server is running; writes are atomic (temp file + rename), so a copy
-never contains a half-written file.
+JSON files are written atomically (temp file + rename). For a consistent copy of the
+SQLite database, stop the server first, or use `sqlite3 data/memory.db ".backup backup.db"`.

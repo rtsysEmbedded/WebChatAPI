@@ -84,6 +84,9 @@
           <svg viewBox="0 0 24 24" class="icon small"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <span class="spacer"></span>
+        <button id="save-chat" class="icon-btn" data-i18n-title="topbar.saveChat" hidden>
+          <svg viewBox="0 0 24 24" class="icon"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+        </button>
         <button id="settings-button" class="icon-btn" data-i18n-title="topbar.chatSettings">
           <svg viewBox="0 0 24 24" class="icon"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
         </button>
@@ -185,14 +188,28 @@
         <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="dialog-tools">
-      <p class="muted small" id="memory-hint"></p>
-      <form id="memory-form" class="row gap">
-        <input id="memory-input" class="input" dir="auto" data-i18n-placeholder="memory.placeholder">
-        <button type="submit" class="btn primary" data-i18n="memory.add"></button>
-      </form>
+    <div class="tabs memory-tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="facts" data-i18n="memory.tabFacts"></button>
+      <button type="button" class="tab" data-tab="archive" data-i18n="memory.tabArchive"></button>
     </div>
-    <div id="memory-list" class="item-list"></div>
+    <div class="memory-panel" data-panel="facts">
+      <div class="dialog-tools">
+        <p class="muted small" id="memory-hint"></p>
+        <form id="memory-form" class="row gap">
+          <input id="memory-input" class="input" dir="auto" data-i18n-placeholder="memory.placeholder">
+          <button type="submit" class="btn primary" data-i18n="memory.add"></button>
+        </form>
+      </div>
+      <div id="memory-list" class="item-list"></div>
+    </div>
+    <div class="memory-panel" data-panel="archive" hidden>
+      <div class="dialog-tools">
+        <p class="muted small" data-i18n="memory.archiveHint"></p>
+        <input id="archive-search" type="search" class="input" dir="auto" data-i18n-placeholder="memory.archiveSearch">
+        <p class="muted tiny" id="archive-status"></p>
+      </div>
+      <div id="archive-list" class="item-list"></div>
+    </div>
   </dialog>
 
   <!-- Characters list -->

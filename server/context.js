@@ -6,6 +6,7 @@
 
 const { config, prompts, fill, log, t } = require('./config');
 const storage = require('./storage');
+const archive = require('./archive');
 const { getProvider, buildBody, serializeBody, complete } = require('./providers');
 
 const P = prompts;
@@ -19,7 +20,42 @@ function memoryList(items) {
   return items.map((m) => fill(P.memory.item, { text: m.text })).join('\n');
 }
 
-function systemPrompt(conversation) {
+function clipTotal(text, max) {
+  return text.length > max ? text.slice(0, max) + P.memory.archive.clipped : text;
+}
+
+function formatDate(iso) {
+  return iso ? iso.slice(0, 10) : '';
+}
+
+// Text used to search the archive: the latest user message(s).
+function retrievalQuery(messages) {
+  const R = config.memory.archive.retrieval;
+  return messages
+    .filter((m) => m.role === 'user' && m.content)
+    .slice(-R.queryMessages)
+    .map((m) => m.content)
+    .join('\n')
+    .slice(-R.maxQueryChars);
+}
+
+// Relevant archive entries as a system-prompt block, within a char budget.
+async function archiveBlock(conversation, messages) {
+  if (!archive.enabled()) return '';
+  const hits = await archive.search(retrievalQuery(messages), { excludeConversationId: conversation.id });
+  if (!hits.length) return '';
+  let budget = config.memory.archive.retrieval.maxInjectChars;
+  const entries = [];
+  for (const h of hits) {
+    if (budget <= 0) break;
+    const entry = fill(P.memory.archive.entry, { title: h.title, date: formatDate(h.updatedAt), text: clipTotal(h.text, budget) });
+    budget -= entry.length;
+    entries.push(entry);
+  }
+  return fill(P.memory.archive.block, { entries: entries.join('\n\n') });
+}
+
+async function systemPrompt(conversation, messages = []) {
   const parts = [];
   const character = conversation.characterId ? storage.characters.get(conversation.characterId) : null;
   if (character && character.systemPrompt) parts.push(character.systemPrompt);
@@ -27,6 +63,8 @@ function systemPrompt(conversation) {
   if (memoryActive(conversation)) {
     const items = storage.memory.all();
     if (items.length) parts.push(fill(P.memory.block, { items: memoryList(items) }));
+    const retrieved = await archiveBlock(conversation, messages);
+    if (retrieved) parts.push(retrieved);
   }
   return parts.join(P.systemJoiner);
 }
@@ -70,7 +108,7 @@ async function userContent(m) {
 
 async function upstreamMessages(conversation, messages) {
   const out = [];
-  const sys = systemPrompt(conversation);
+  const sys = await systemPrompt(conversation, messages);
   if (sys) out.push({ role: 'system', content: sys });
   for (const m of messages) {
     if (m.role === 'user') out.push({ role: 'user', content: await userContent(m) });
@@ -91,7 +129,7 @@ function clip(text, max) {
 
 // Parse the extractor's answer. Models often wrap JSON in code fences or add
 // prose around it, so try the whole text first, then every {...} span.
-function parseJsonObject(text) {
+function parseJsonObject(text, keys = ['add', 'remove']) {
   const clean = text.replace(/```(?:json)?/gi, '').trim();
   try {
     return JSON.parse(clean);
@@ -102,7 +140,7 @@ function parseJsonObject(text) {
     for (let j = clean.lastIndexOf('}'); j > i; j = clean.lastIndexOf('}', j - 1)) {
       try {
         const obj = JSON.parse(clean.slice(i, j + 1));
-        if (obj && typeof obj === 'object' && ('add' in obj || 'remove' in obj)) return obj;
+        if (obj && typeof obj === 'object' && keys.some((k) => k in obj)) return obj;
       } catch {
         /* try a shorter span */
       }
@@ -123,11 +161,65 @@ function recentConversation(conversation, cfg) {
     .join('\n\n');
 }
 
+// Transcript for the summarizer: newest messages that fit the budget.
+function transcript(conversation) {
+  const names = P.memory.extract.roles;
+  const lines = conversation.messages
+    .filter((m) => (m.role === 'user' || m.role === 'assistant') && ((m.content && m.content.trim()) || (m.attachments && m.attachments.length)))
+    .map((m) => {
+      const files = (m.attachments || []).map((a) => a.name).join(', ');
+      const text = (m.content || '').trim() + (files ? ` [${files}]` : '');
+      return fill(P.memory.extract.line, { role: names[m.role], text });
+    });
+  const max = config.memory.archive.maxTranscriptChars;
+  const kept = [];
+  let size = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (size + lines[i].length > max && kept.length) break;
+    kept.unshift(lines[i].slice(-max));
+    size += lines[i].length;
+  }
+  const omitted = lines.length - kept.length;
+  return (omitted ? fill(P.memory.summary.omitted, { count: omitted }) + '\n\n' : '') + kept.join('\n\n');
+}
+
+// Summarize the whole conversation into one archive entry (replacing an
+// earlier summary of the same conversation). Throws on failure.
+async function summarizeConversation(conversation, providerKeys) {
+  if (!archive.enabled()) throw new Error(t('server.errors.archiveDisabled'));
+  const S = config.memory.archive.summarizer;
+  const useOwn = S.providerId && S.modelId;
+  const p = getProvider(useOwn ? S.providerId : conversation.providerId);
+  const key = p && providerKeys[p.id];
+  if (!key) throw new Error(t('server.errors.providerKeyMissing', { provider: p ? p.name : '-' }));
+
+  const messages = [
+    { role: 'system', content: P.memory.summary.system },
+    {
+      role: 'user',
+      content: fill(P.memory.summary.user, {
+        title: conversation.title || '',
+        date: formatDate(conversation.updatedAt || new Date().toISOString()),
+        transcript: transcript(conversation),
+      }),
+    },
+  ];
+  const settings = { modelId: useOwn ? S.modelId : conversation.modelId, temperature: S.temperature, maxTokens: S.maxTokens, reasoningEffort: '' };
+  const json = serializeBody(p, buildBody(p, settings, messages, false));
+  const answer = await complete(p, key, json, AbortSignal.timeout(S.timeoutSeconds * 1000));
+  const parsed = parseJsonObject(answer, ['title', 'summary']);
+  // Fall back to the raw answer when the model ignored the JSON format.
+  const title = (parsed && typeof parsed.title === 'string' && parsed.title.trim()) || conversation.title || formatDate(new Date().toISOString());
+  const text = (parsed && typeof parsed.summary === 'string' && parsed.summary.trim()) || answer.trim();
+  if (!text) throw new Error(t('server.errors.memoryParse'));
+  return archive.upsertConversation({ conversationId: conversation.id, title: title.slice(0, 200), text });
+}
+
 // Update long-term memory from the latest exchange. Returns
 // { added: [...], removed: [...], error: string|null }. Never throws.
 async function extractMemory(conversation, providerKeys) {
   const cfg = config.memory.autoExtract;
-  const result = { added: [], removed: [], error: null };
+  const result = { added: [], removed: [], saved: null, error: null };
   if (!memoryActive(conversation) || !cfg.enabled) return result;
 
   const useOwn = cfg.providerId && cfg.modelId;
@@ -186,6 +278,12 @@ async function extractMemory(conversation, providerKeys) {
       seen.add(normalizeFact(text));
       result.added.push(await storage.memory.add({ text, source: 'auto', conversationId: conversation.id }));
     }
+
+    // "Remember this conversation" → store a clean summary of the whole chat.
+    if (parsed.saveConversation === true && config.memory.archive.summarizeOnRemember && archive.enabled()) {
+      const entry = await summarizeConversation(conversation, providerKeys);
+      result.saved = { id: entry.id, title: entry.title };
+    }
     return result;
   } catch (err) {
     log('server.log.memoryExtractError', { error: err.message });
@@ -194,4 +292,4 @@ async function extractMemory(conversation, providerKeys) {
   }
 }
 
-module.exports = { systemPrompt, upstreamMessages, extractMemory, parseJsonObject, TEXT_KINDS };
+module.exports = { systemPrompt, upstreamMessages, extractMemory, summarizeConversation, parseJsonObject, transcript, TEXT_KINDS };

@@ -11,6 +11,7 @@ index.html + js/*.js  ── JSON ─▶  index.js  (router, auth gate)
                                   ├─ context.js    system prompt, memory, attachments → upstream messages
                                   ├─ features.js   uploads, memory and character endpoints
                                   ├─ extract.js    PDF / DOCX / text extraction
+                                  ├─ archive.js    SQLite archive: FTS5 (BM25) + vectors, RRF search
                                   ├─ providers.js  ── HTTPS + Bearer key ─▶ /models
                                   │                ◀── SSE (OpenAI format) ─ /chat/completions
                                   ├─ http.js       body parsing, static files, headers
@@ -47,6 +48,7 @@ server/
   context.js             system prompt assembly, attachments, memory extraction
   features.js            uploads, memory and character HTTP handlers
   extract.js             text extraction (pdfjs-dist, mammoth)
+  archive.js             long-term archive (node:sqlite, FTS5, embeddings, hybrid search)
   storage.js             persistence (atomic writes, index, uploads, list stores)
   http.js                HTTP helpers, static files, security headers
   cli/set-pin.js         `npm run set-pin`
@@ -60,7 +62,7 @@ public/
   js/models.js           model picker dialog
   js/app.js              application state, sidebar, chat, composer, attachments
   js/features.js         memory manager and character editor dialogs
-data/                    (git-ignored) index.json, conversations/, uploads/, memory.json, characters.json
+data/                    (git-ignored) index.json, conversations/, uploads/, memory.json, memory.db, characters.json
 ```
 
 ## HTTP API
@@ -96,6 +98,10 @@ the UI translates `<code>` via `ui.errors.<code>`.
 | PATCH / DELETE | `/api/memory/:id` | Edit `{ text }`; delete. |
 | GET / POST | `/api/characters` | List `{ items }`; create `{ name, avatar, description, systemPrompt, providerId, modelId, temperature, useMemory }`. |
 | PATCH / DELETE | `/api/characters/:id` | Update (same fields); delete. |
+| POST | `/api/conversations/:id/remember` | Summarize the whole chat into the archive (replaces an earlier summary of it). Returns the entry. |
+| GET | `/api/memory/archive[?q=…&limit=&offset=]` | `{ items, status }`. With `q`: hybrid search results (`score`, `via: ["vector","keyword"]`); without: newest first. `status = { count, embedded, mode: "hybrid" \| "keyword" }`. |
+| GET / PATCH / DELETE | `/api/memory/archive/:id` | Read; edit `{ title, text }` (re-embedded); delete. |
+| DELETE | `/api/memory/archive` | Delete all archive entries. |
 
 `Model` = `{ id, name, description, contextLength, inputPrice, outputPrice, vision, reasoning }`.
 Prices are USD **per token** (`null` when unknown).
@@ -129,7 +135,7 @@ is saved.
 | `delta` | `{ type: "content" \| "reasoning", text }` | Next piece of answer or reasoning text. |
 | `usage` | `{ usage: { prompt_tokens, completion_tokens, ... } }` | Token usage, when the provider sends it. |
 | `done` | `{ message, conversation }` | The final assistant message as stored, including `error`, `stopped` and `usage`. The answer is complete; the UI finishes here. |
-| `memory` | `{ added: [...], removed: [...], error: string \| null }` | Optional, after `done`: result of automatic memory extraction (sent only when something changed or it failed). The stream then ends. |
+| `memory` | `{ added: [...], removed: [...], saved: { id, title } \| null, error: string \| null }` | Optional, after `done`: result of automatic memory extraction (sent only when something changed or it failed). The stream then ends. |
 
 Provider errors, including error frames sent in the middle of a stream (for example
 `data: {"error":{...}}` from Clean APIs), do not break the protocol. They end up in
@@ -167,7 +173,8 @@ message text as `<attached_file name="…">…</attached_file>` blocks. Images b
 `{ "type": "image_url", "image_url": { "url": "data:…" } }` parts and videos
 `{ "type": "video_url", "video_url": { "url": "data:…" } }` parts. Without media parts
 the content stays a plain string, for maximum provider compatibility. The system prompt
-is `character.systemPrompt`, `conversation.systemPrompt` and the memory block, joined by
+is `character.systemPrompt`, `conversation.systemPrompt`, the memory facts block and the
+retrieved archive block (hybrid search over the latest user messages), joined by
 `prompts.systemJoiner`, with empty parts omitted.
 
 `temperature`, `max_tokens` and `reasoning_effort` are only sent when set (and

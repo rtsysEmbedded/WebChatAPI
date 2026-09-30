@@ -68,7 +68,7 @@ Wants=network-online.target
 User=webchat
 WorkingDirectory=/opt/webchatapi/app
 EnvironmentFile=/etc/webchatapi.env
-ExecStart=/usr/bin/node server/index.js
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning server/index.js
 Restart=on-failure
 NoNewPrivileges=true
 ProtectSystem=strict

@@ -160,6 +160,23 @@ async function* streamChat(p, apiKey, json, signal) {
   }
 }
 
+// Create embeddings for a list of texts (OpenAI-compatible /embeddings).
+// Returns an array of number arrays in input order.
+async function embed(p, apiKey, model, inputs, dimensions, signal) {
+  const body = { model, input: inputs, encoding_format: 'float' };
+  if (dimensions) body.dimensions = dimensions;
+  const res = await fetch(p.baseUrl + p.embeddingsPath, {
+    method: 'POST',
+    headers: headersFor(p, apiKey),
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new Error(t('server.errors.upstream', { status: res.status, message: await upstreamError(res) }));
+  const data = await res.json();
+  if (!Array.isArray(data.data)) throw new Error(t('server.errors.embeddingFormat'));
+  return data.data.slice().sort((a, b) => a.index - b.index).map((d) => d.embedding);
+}
+
 // Non-streaming completion; returns the answer text.
 async function complete(p, apiKey, json, signal) {
   const res = await post(p, apiKey, json, signal);
@@ -177,6 +194,7 @@ module.exports = {
   serializeBody,
   streamChat,
   complete,
+  embed,
   sseJson,
   normalizeModel,
   passesFilter,

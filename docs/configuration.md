@@ -129,6 +129,29 @@ See [features.md](features.md#long-term-memory).
 | `autoExtract.maxContextChars` | `4000` | Maximum characters per message sent to the extractor. |
 | `autoExtract.contextMessages` | `6` | Number of recent messages (user and assistant) the extractor sees, so that “remember this” also covers information given earlier. |
 
+### `memory.archive`
+
+See [features.md](features.md#archive-remember-this--summary-of-the-whole-conversation).
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `true` | Enables the SQLite archive of conversation summaries. |
+| `dbFile` | `"memory.db"` | File name inside the data directory. |
+| `summarizeOnRemember` | `true` | Summarize the whole chat when the user explicitly asks to remember it. |
+| `summarizer.providerId` / `modelId` | `null` / `null` | Model that writes summaries; `null` = the chat's model. |
+| `summarizer.maxTokens` / `temperature` / `timeoutSeconds` | `null` / `null` / `120` | Request settings for summaries. |
+| `maxTranscriptChars` | `60000` | Maximum transcript length sent to the summarizer (newest messages kept). |
+| `embedding.providerId` / `modelId` | `null` / `null` | Embedding model for vector search. `null` = keyword search only. |
+| `embedding.dimensions` | `null` | Optional reduced dimensionality (only for models that support it). |
+| `embedding.batchSize` / `maxInputChars` / `timeoutSeconds` | `32` / `8000` / `60` | Embedding request settings. |
+| `retrieval.topK` | `4` | Entries added to the system prompt per message. |
+| `retrieval.candidates` | `20` | Candidates taken from each method before fusion. |
+| `retrieval.minSimilarity` | `0.3` | Minimum cosine similarity for vector hits. |
+| `retrieval.rrfK` | `60` | RRF constant *k* (60 is the value from the original paper). |
+| `retrieval.maxInjectChars` | `8000` | Character budget for injected entries. |
+| `retrieval.queryMessages` / `maxQueryChars` | `2` / `2000` | How many recent user messages form the search query, and its maximum length. |
+| `retrieval.minTokenLength` / `maxQueryTokens` | `2` / `24` | Keyword query building. |
+
 ## `characters`
 
 | Key | Default | Description |
@@ -170,7 +193,7 @@ and vLLM.
 | `enabled` | `false` hides the provider. |
 | `baseUrl` | API root, e.g. `https://cleanapis.com/v1`. |
 | `apiKeyEnv` | Env var holding the key (alternatively `providers.<id>.apiKey` in the secrets file). |
-| `modelsPath` / `chatPath` | Usually `/models` and `/chat/completions`. |
+| `modelsPath` / `chatPath` / `embeddingsPath` | Usually `/models`, `/chat/completions` and `/embeddings`. |
 | `headers` | Extra request headers. OpenRouter uses `X-Title` (and optionally `HTTP-Referer`) for app attribution. |
 | `extraBody` | Merged into every chat request body, e.g. `{"include_reasoning": true}` or provider routing options. Values set by the app (model, messages, stream, temperature, …) take precedence. |
 | `supportsReasoningEffort` | Show the reasoning-effort setting and send `reasoning_effort`. |

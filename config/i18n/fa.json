@@ -49,7 +49,8 @@
     },
     "topbar": {
       "toggleSidebar": "نمایش گفتگوها",
-      "chatSettings": "تنظیمات گفتگو"
+      "chatSettings": "تنظیمات گفتگو",
+      "saveChat": "ذخیرهٔ این گفتگو در حافظهٔ بلندمدت"
     },
     "chat": {
       "emptyTitle": "امروز چطور می‌توانم کمکتان کنم؟",
@@ -142,7 +143,9 @@
       "memoryFull": "حافظه پر است. ابتدا چند مورد را حذف کنید.",
       "nameRequired": "وارد کردن نام الزامی است.",
       "tooManyCharacters": "به حداکثر تعداد شخصیت‌ها رسیده‌اید.",
-      "requestTooLarge": "حجم درخواست برای این ارائه‌دهنده بیش از حد مجاز است."
+      "requestTooLarge": "حجم درخواست برای این ارائه‌دهنده بیش از حد مجاز است.",
+      "archiveDisabled": "آرشیو بلندمدت در config.json غیرفعال است (memory.archive.enabled).",
+      "summaryFailed": "خلاصه‌سازی گفتگو ممکن نشد."
     },
     "memory": {
       "title": "حافظه",
@@ -161,7 +164,24 @@
       "updated": "حافظه به‌روز شد: {facts}",
       "disabled": "حافظه در config.json غیرفعال است (memory.enabled).",
       "removed": "فراموش شد: {facts}",
-      "failed": "حافظه به‌روز نشد: {error}"
+      "failed": "حافظه به‌روز نشد: {error}",
+      "tabFacts": "واقعیت‌ها",
+      "tabArchive": "گفتگوهای ذخیره‌شده",
+      "saved": "در حافظه ذخیره شد: {title}",
+      "saving": "در حال خلاصه‌سازی گفتگو…",
+      "archiveHint": "خلاصه‌های تمیز گفتگوهایی که خواسته‌اید به خاطر سپرده شوند. مرتبط‌ترین‌ها به‌طور خودکار پیدا و به گفتگوهای جدید اضافه می‌شوند.",
+      "archiveSearch": "جستجو در گفتگوهای ذخیره‌شده",
+      "archiveEmpty": "هنوز گفتگویی ذخیره نشده است. در یک گفتگو بگویید «یادت بمونه» یا از دکمهٔ نشانک در بالای صفحه استفاده کنید.",
+      "archiveCount": "{count} مورد ذخیره‌شده · جستجو: {mode}",
+      "modeHybrid": "ترکیبی (وکتور + کلیدواژه)",
+      "modeKeyword": "فقط کلیدواژه (برای جستجوی معنایی یک مدل embedding تنظیم کنید)",
+      "archiveDeleteConfirm": "خلاصهٔ ذخیره‌شدهٔ «{title}» حذف شود؟",
+      "archiveClearConfirm": "همهٔ {count} گفتگوی ذخیره‌شده حذف شوند؟ این کار برگشت‌پذیر نیست.",
+      "show": "نمایش",
+      "hide": "پنهان",
+      "matchedBy": "یافته با: {via}",
+      "vector": "معنا",
+      "keyword": "کلیدواژه"
     },
     "characters": {
       "title": "شخصیت‌ها",
@@ -209,12 +229,18 @@
       "envUnsupported": "این نسخهٔ Node.js نمی‌تواند {file} را بارگذاری کند؛ از Node.js 20.12 یا جدیدتر استفاده کنید یا متغیرها را در shell تنظیم کنید.",
       "uploadsCleaned": "{count} فایل بدون استفاده حذف شد",
       "memoryExtractError": "استخراج حافظه ناموفق بود: {error}",
-      "memoryExtractParse": "استخراج حافظه JSON قابل‌استفاده برنگرداند: {answer}"
+      "memoryExtractParse": "استخراج حافظه JSON قابل‌استفاده برنگرداند: {answer}",
+      "embeddingError": "درخواست embedding ناموفق بود: {error}",
+      "reindexStart": "در حال ساخت وکتور برای {count} مورد حافظه با {model}…",
+      "reindexDone": "وکتور {count} مورد حافظه ساخته شد"
     },
     "errors": {
       "upstream": "خطای ارائه‌دهنده {status}: {message}",
       "requestTooLarge": "حجم درخواست {size} مگابایت است، اما {provider} حداکثر {max} مگابایت می‌پذیرد. برخی پیوست‌ها را حذف کنید یا گفتگوی جدیدی شروع کنید.",
-      "memoryParse": "مدل JSON معتبر برنگرداند"
+      "memoryParse": "مدل JSON معتبر برنگرداند",
+      "embeddingFormat": "پاسخ embeddings قالب غیرمنتظره دارد",
+      "archiveDisabled": "آرشیو بلندمدت غیرفعال است",
+      "providerKeyMissing": "کلید API برای {provider} وجود ندارد"
     },
     "cli": {
       "enterPin": "PIN جدید: ",

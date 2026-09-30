@@ -96,6 +96,31 @@ async function main() {
   for await (const j of sseJson(chunks)) out.push(j.a);
   assert.deepStrictEqual(out, [1, 2]);
 
+  // Archive: FTS query sanitising, RRF, and a real SQLite round trip
+  // (keyword mode, temporary directory).
+  const archive = require('../archive');
+  assert.strictEqual(archive.ftsQuery('STM32F407 "x" OR-drop پروژه‌ام'), '"stm32f407" OR "or" OR "drop" OR "پروژه" OR "ام"');
+  assert.strictEqual(archive.ftsQuery('a ! ?'), '');
+  assert.deepStrictEqual(archive.fuse([['a', 'b'], ['b', 'c']], 60).map(([id]) => id), ['b', 'a', 'c']);
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wca-selftest-'));
+  try {
+    archive.init(tmp, {});
+    const e1 = await archive.upsertConversation({ conversationId: 'c1', title: 'UART driver', text: 'Baudrate 115200 on STM32F407, deadline Friday.' });
+    await archive.upsertConversation({ conversationId: 'c2', title: 'سفر', text: 'برنامهٔ سفر به برلین در ماه مه.' });
+    const again = await archive.upsertConversation({ conversationId: 'c1', title: 'UART driver v2', text: 'Baudrate 921600 on STM32F407.' });
+    assert.strictEqual(again.id, e1.id); // same conversation → replaced, not duplicated
+    assert.strictEqual(archive.status().count, 2);
+    assert.strictEqual((await archive.search('which baudrate for stm32f407?'))[0].title, 'UART driver v2');
+    assert.strictEqual((await archive.search('سفر برلین'))[0].conversationId, 'c2');
+    assert.strictEqual((await archive.search('stm32f407', { excludeConversationId: 'c1' })).length, 0);
+    assert.ok(archive.remove(e1.id) && archive.status().count === 1);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+
   console.log('selftest: all checks passed');
 }
 

@@ -9,9 +9,9 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "set-pin": "node server/cli/set-pin.js",
-    "check": "node --check server/index.js && node server/cli/selftest.js"
+    "check": "node --check server/index.js && node --disable-warning=ExperimentalWarning server/cli/selftest.js"
   },
   "dependencies": {
     "@highlightjs/cdn-assets": "^11.12.0",

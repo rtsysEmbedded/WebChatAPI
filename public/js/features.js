@@ -6,6 +6,10 @@ window.Features = (() => {
   const $ = (id) => document.getElementById(id);
   let cfg = null;
   let memoryItems = [];
+  let archiveItems = [];
+  let archiveStatus = null;
+  let activeTab = 'facts';
+  let searchTimer = null;
   let characters = [];
   let editing = null; // character being edited (null = new)
   let editModel = null; // { providerId, modelId } chosen in the editor
@@ -18,7 +22,13 @@ window.Features = (() => {
   function init(publicConfig) {
     cfg = publicConfig;
     $('memory-form').addEventListener('submit', addMemory);
-    $('memory-clear').addEventListener('click', clearMemory);
+    $('memory-clear').addEventListener('click', () => (activeTab === 'facts' ? clearMemory() : clearArchive()));
+    document.querySelectorAll('.memory-tabs .tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+    $('archive-search').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadArchive, cfg.ui.searchDebounceMs);
+    });
+    document.querySelector('.memory-tabs [data-tab="archive"]').hidden = !cfg.memory.archive.enabled;
     $('character-new').addEventListener('click', () => openEditor(null));
     $('character-form').addEventListener('submit', saveCharacter);
     $('ch-model-choose').addEventListener('click', () => {
@@ -40,7 +50,89 @@ window.Features = (() => {
     $('memory-hint').textContent = hint.join(' ');
     $('memory-input').maxLength = cfg.memory.maxItemChars;
     $('memory-dialog').showModal();
-    await loadMemory();
+    await showTab(activeTab);
+  }
+
+  async function showTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.memory-tabs .tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.memory-panel').forEach((p) => { p.hidden = p.dataset.panel !== tab; });
+    if (tab === 'facts') await loadMemory();
+    else await loadArchive();
+  }
+
+  // ---- Archive (saved conversation summaries) -----------------------------
+
+  async function loadArchive() {
+    const q = $('archive-search').value.trim();
+    try {
+      const res = await Api.get(`/api/memory/archive${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+      archiveItems = res.items;
+      archiveStatus = res.status;
+    } catch (err) { App.toastError(err); }
+    renderArchive();
+  }
+
+  function renderArchive() {
+    const list = $('archive-list');
+    list.innerHTML = '';
+    if (archiveStatus) {
+      $('archive-status').textContent = t('memory.archiveCount', {
+        count: archiveStatus.count,
+        mode: t(archiveStatus.mode === 'hybrid' ? 'memory.modeHybrid' : 'memory.modeKeyword'),
+      });
+    }
+    $('memory-clear').hidden = !(archiveStatus && archiveStatus.count);
+    if (!archiveItems.length) {
+      list.append(App.el('div', 'notice', t(archiveStatus && archiveStatus.count ? 'models.noResults' : 'memory.archiveEmpty')));
+      return;
+    }
+    for (const a of archiveItems) {
+      const row = App.el('div', 'item');
+      const body = App.el('div', 'item-body');
+      const title = App.el('div', 'item-title', a.title);
+      title.dir = 'auto';
+      const subParts = [new Date(a.updatedAt).toLocaleDateString(I18n.meta.locale)];
+      if (a.via && a.via.length) subParts.push(t('memory.matchedBy', { via: a.via.map((v) => t(`memory.${v}`)).join(' + ') }));
+      const sub = App.el('div', 'item-sub', subParts.join(' · '));
+      const snippet = App.el('div', 'archive-snippet', a.text.replace(/[#*_`>-]+/g, ' ').replace(/\s+/g, ' ').trim());
+      snippet.dir = 'auto';
+      const full = App.el('div', 'archive-body md');
+      full.dir = 'auto';
+      full.hidden = true;
+      body.append(title, sub, snippet, full);
+      const toggle = App.el('button', 'btn ghost small', t('memory.show'));
+      toggle.type = 'button';
+      toggle.addEventListener('click', () => {
+        const open = full.hidden;
+        if (open && !full.childNodes.length) Render.markdown(full, a.text, true);
+        full.hidden = !open;
+        snippet.hidden = open;
+        toggle.textContent = t(open ? 'memory.hide' : 'memory.show');
+      });
+      const actions = App.el('div', 'item-actions');
+      actions.append(
+        toggle,
+        App.iconButton(ICONS.trash, 'memory.delete', async () => {
+          if (!(await App.ask(t('memory.archiveDeleteConfirm', { title: a.title }), { okKey: 'memory.delete', danger: true }))) return;
+          try {
+            await Api.del(`/api/memory/archive/${a.id}`);
+            await loadArchive();
+          } catch (err) { App.toastError(err); }
+        }),
+      );
+      row.append(body, actions);
+      list.append(row);
+    }
+  }
+
+  async function clearArchive() {
+    const count = archiveStatus ? archiveStatus.count : 0;
+    if (!(await App.ask(t('memory.archiveClearConfirm', { count }), { okKey: 'memory.clearAll', danger: true }))) return;
+    try {
+      await Api.del('/api/memory/archive');
+      await loadArchive();
+    } catch (err) { App.toastError(err); }
   }
 
   async function loadMemory() {

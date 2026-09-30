@@ -18,8 +18,9 @@ free-tier hosts (a free VM, Docker hosts, PaaS free plans) and on a Raspberry Pi
   `reasoning_content`, OpenRouter `reasoning`).
 - **File uploads:** images and video (for models that accept them), and PDF, Word (.docx)
   and text/code files, whose text is extracted so they work with every model.
-- **Long-term memory:** facts about you, shared across all chats, added manually or
-  extracted automatically after each answer.
+- **Long-term memory:** facts about you (always in context), plus an archive of clean
+  summaries of whole conversations (“remember this”), found again with hybrid search
+  (SQLite FTS5/BM25 + embeddings, fused with RRF).
 - **Characters:** reusable personas with their own instructions, default model and
   temperature.
 - Per-chat system prompt, temperature, max tokens and reasoning effort.

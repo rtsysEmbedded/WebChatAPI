@@ -49,7 +49,8 @@
     },
     "topbar": {
       "toggleSidebar": "Show chats",
-      "chatSettings": "Chat settings"
+      "chatSettings": "Chat settings",
+      "saveChat": "Save this chat to long-term memory"
     },
     "chat": {
       "emptyTitle": "How can I help you today?",
@@ -142,7 +143,9 @@
       "memoryFull": "Memory is full. Delete some entries first.",
       "nameRequired": "A name is required.",
       "tooManyCharacters": "Maximum number of characters reached.",
-      "requestTooLarge": "The request is too large for this provider."
+      "requestTooLarge": "The request is too large for this provider.",
+      "archiveDisabled": "Long-term archive is disabled in config.json (memory.archive.enabled).",
+      "summaryFailed": "Could not summarize the conversation."
     },
     "memory": {
       "title": "Memory",
@@ -161,7 +164,24 @@
       "updated": "Memory updated: {facts}",
       "disabled": "Memory is disabled in config.json (memory.enabled).",
       "removed": "Forgotten: {facts}",
-      "failed": "Memory could not be updated: {error}"
+      "failed": "Memory could not be updated: {error}",
+      "tabFacts": "Facts",
+      "tabArchive": "Saved conversations",
+      "saved": "Saved to memory: {title}",
+      "saving": "Summarizing the conversation…",
+      "archiveHint": "Clean summaries of conversations you asked to remember. The most relevant ones are found automatically and added to new chats.",
+      "archiveSearch": "Search saved conversations",
+      "archiveEmpty": "No saved conversations yet. Say \"remember this\" in a chat or use the bookmark button at the top.",
+      "archiveCount": "{count} saved · search: {mode}",
+      "modeHybrid": "hybrid (vector + keyword)",
+      "modeKeyword": "keyword only (set an embedding model for semantic search)",
+      "archiveDeleteConfirm": "Delete the saved summary \"{title}\"?",
+      "archiveClearConfirm": "Delete all {count} saved conversations? This cannot be undone.",
+      "show": "Show",
+      "hide": "Hide",
+      "matchedBy": "matched: {via}",
+      "vector": "meaning",
+      "keyword": "keywords"
     },
     "characters": {
       "title": "Characters",
@@ -209,12 +229,18 @@
       "envUnsupported": "This Node.js version cannot load {file}; use Node.js 20.12 or newer, or set the variables in your shell.",
       "uploadsCleaned": "Removed {count} unused uploads",
       "memoryExtractError": "Memory extraction failed: {error}",
-      "memoryExtractParse": "Memory extraction returned no usable JSON: {answer}"
+      "memoryExtractParse": "Memory extraction returned no usable JSON: {answer}",
+      "embeddingError": "Embedding request failed: {error}",
+      "reindexStart": "Embedding {count} memory entries with {model}…",
+      "reindexDone": "Embedded {count} memory entries"
     },
     "errors": {
       "upstream": "Upstream error {status}: {message}",
       "requestTooLarge": "Request is {size} MB, but {provider} accepts at most {max} MB. Remove some attachments or start a new chat.",
-      "memoryParse": "the model did not return valid JSON"
+      "memoryParse": "the model did not return valid JSON",
+      "embeddingFormat": "unexpected embeddings response",
+      "archiveDisabled": "long-term archive is disabled",
+      "providerKeyMissing": "no API key for {provider}"
     },
     "cli": {
       "enterPin": "New PIN: ",

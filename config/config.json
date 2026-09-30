@@ -102,7 +102,8 @@
     "priceDecimals": 2,
     "sendOnEnter": true,
     "showModelDescriptions": true,
-    "maxModelResults": 1000
+    "maxModelResults": 1000,
+    "searchDebounceMs": 300
   },
   "providers": [
     {
@@ -113,6 +114,7 @@
       "apiKeyEnv": "CLEANAPIS_API_KEY",
       "modelsPath": "/models",
       "chatPath": "/chat/completions",
+      "embeddingsPath": "/embeddings",
       "headers": {},
       "extraBody": {},
       "supportsReasoningEffort": false,
@@ -152,6 +154,7 @@
       "apiKeyEnv": "OPENROUTER_API_KEY",
       "modelsPath": "/models",
       "chatPath": "/chat/completions",
+      "embeddingsPath": "/embeddings",
       "headers": {
         "X-Title": "WebChatAPI"
       },
@@ -329,6 +332,38 @@
       "maxRemovePerTurn": 5,
       "maxContextChars": 4000,
       "contextMessages": 6
+    },
+    "archive": {
+      "enabled": true,
+      "dbFile": "memory.db",
+      "summarizeOnRemember": true,
+      "summarizer": {
+        "providerId": null,
+        "modelId": null,
+        "maxTokens": null,
+        "temperature": null,
+        "timeoutSeconds": 120
+      },
+      "maxTranscriptChars": 60000,
+      "embedding": {
+        "providerId": null,
+        "modelId": null,
+        "dimensions": null,
+        "batchSize": 32,
+        "maxInputChars": 8000,
+        "timeoutSeconds": 60
+      },
+      "retrieval": {
+        "topK": 4,
+        "candidates": 20,
+        "minSimilarity": 0.3,
+        "rrfK": 60,
+        "maxInjectChars": 8000,
+        "queryMessages": 2,
+        "maxQueryChars": 2000,
+        "minTokenLength": 2,
+        "maxQueryTokens": 24
+      }
     }
   },
   "characters": {

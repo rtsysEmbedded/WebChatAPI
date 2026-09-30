@@ -6,6 +6,7 @@ const auth = require('./auth');
 const storage = require('./storage');
 const { providers, getProvider, listModels, buildBody, serializeBody, streamChat } = require('./providers');
 const context = require('./context');
+const archive = require('./archive');
 const features = require('./features');
 const H = require('./http');
 
@@ -105,6 +106,7 @@ function publicConfig() {
       defaultOnForNewChats: config.memory.defaultOnForNewChats,
       autoExtract: config.memory.autoExtract.enabled,
       maxItemChars: config.memory.maxItemChars,
+      archive: archive.status(),
     },
     characters: config.characters,
     providers: providers.map((p) => ({
@@ -283,10 +285,45 @@ async function chat(req, res, id) {
   // about changes (or a failure) through a final 'memory' event.
   if (!assistant.stopped && !assistant.error && !body.regenerate) {
     const mem = await context.extractMemory(c, secrets.providerKeys);
-    if (mem.added.length || mem.removed.length || mem.error) send('memory', mem);
+    if (mem.added.length || mem.removed.length || mem.saved || mem.error) send('memory', mem);
   }
   clearInterval(keepAlive);
   if (open()) res.end();
+}
+
+// /api/memory/archive[/:id] — saved conversation summaries.
+async function archiveRoute(req, res, url, method, id) {
+  if (!archive.enabled()) throw new H.HttpError(400, 'archiveDisabled');
+  if (!id && method === 'GET') {
+    const q = (url.searchParams.get('q') || '').trim();
+    const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 200);
+    const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+    const items = q ? await archive.search(q, { topK: limit }) : archive.list(offset, limit);
+    return H.sendJson(res, 200, { items, status: archive.status() });
+  }
+  if (!id && method === 'DELETE') {
+    archive.clear();
+    return H.sendJson(res, 200, { ok: true });
+  }
+  if (id && method === 'GET') {
+    const entry = archive.get(id);
+    if (!entry) throw new H.HttpError(404, 'notFound');
+    return H.sendJson(res, 200, entry);
+  }
+  if (id && method === 'PATCH') {
+    const body = await H.readJsonBody(req);
+    const patch = {};
+    if (typeof body.title === 'string' && body.title.trim()) patch.title = body.title.trim().slice(0, 200);
+    if (typeof body.text === 'string' && body.text.trim()) patch.text = body.text.trim();
+    const entry = await archive.update(id, patch);
+    if (!entry) throw new H.HttpError(404, 'notFound');
+    return H.sendJson(res, 200, entry);
+  }
+  if (id && method === 'DELETE') {
+    if (!archive.remove(id)) throw new H.HttpError(404, 'notFound');
+    return H.sendJson(res, 200, { ok: true });
+  }
+  throw new H.HttpError(404, 'notFound');
 }
 
 // ---- Router ----------------------------------------------------------------
@@ -336,11 +373,25 @@ async function route(req, res) {
   if (up && method === 'GET') return features.serveUpload(req, res, up[1]);
   if (up && method === 'DELETE') return features.deleteUpload(res, up[1]);
 
+  const arc = /^\/api\/memory\/archive(?:\/([^/]+))?$/.exec(path);
+  if (arc) return archiveRoute(req, res, url, method, arc[1]);
+
   const mem = /^\/api\/memory(?:\/([^/]+))?$/.exec(path);
   if (mem) return features.memoryRoute(req, res, method, mem[1]);
 
   const chr = /^\/api\/characters(?:\/([^/]+))?$/.exec(path);
   if (chr) return features.charactersRoute(req, res, method, chr[1]);
+
+  const rem = /^\/api\/conversations\/([^/]+)\/remember$/.exec(path);
+  if (rem && method === 'POST') {
+    if (!archive.enabled()) throw new H.HttpError(400, 'archiveDisabled');
+    const c = await loadConversation(rem[1]);
+    try {
+      return H.sendJson(res, 201, await context.summarizeConversation(c, secrets.providerKeys));
+    } catch (err) {
+      throw new H.HttpError(502, 'summaryFailed', err.message);
+    }
+  }
 
   const m = /^\/api\/conversations\/([^/]+)(\/chat)?$/.exec(path);
   if (m) {
@@ -361,6 +412,7 @@ async function route(req, res) {
 
 async function main() {
   await storage.init();
+  archive.init(storage.dataDir, secrets.providerKeys);
   await storage.uploads.cleanup();
   setInterval(() => storage.uploads.cleanup().catch(() => {}), config.attachments.cleanupIntervalMinutes * 60e3).unref();
   if (A.enabled && !secrets.pinHash && secrets.pin) {

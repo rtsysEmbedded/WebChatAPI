@@ -15,4 +15,4 @@ VOLUME /data
 
 USER node
 EXPOSE 3000
-CMD ["node", "server/index.js"]
+CMD ["node", "--disable-warning=ExperimentalWarning", "server/index.js"]

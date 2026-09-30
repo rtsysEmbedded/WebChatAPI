@@ -2,9 +2,14 @@
 
 ## Long-term memory
 
-Memory is **one shared list of short facts about you** (for example “Works with STM32
-microcontrollers”, “Prefers answers in Persian”). It is used by every chat, and every
-character, that has memory switched on.
+Memory has two layers:
+
+| Layer | Content | How it reaches the model | Size |
+|-------|---------|--------------------------|------|
+| **Facts** | Short sentences about you (“Works with STM32 microcontrollers”) | **Always** added to the system prompt | small (`memory.maxItems`) |
+| **Archive** | **Clean summaries of whole conversations** you asked to remember | The **most relevant** entries are searched and added per message | practically unlimited (SQLite) |
+
+Both layers are shared by all chats, characters, providers and models.
 
 ### How it reaches the model
 
@@ -81,10 +86,84 @@ injected into that chat nor updated from it. New chats take the default from
 
 Global kill switch: `memory.enabled: false`.
 
+### Archive: “remember this” → summary of the whole conversation
+
+When you say “remember this”, «یادت بمونه», «این مکالمه رو به خاطر بسپار» or similar,
+or press the **bookmark button** in the top bar:
+
+1. A model writes a clean, self-contained Markdown summary of the **entire** conversation
+   (title; context; key facts and data with exact names, numbers and versions; decisions;
+   open questions), in the language you wrote in. Instruction:
+   `prompts.json → memory.summary`. The model is `memory.archive.summarizer`, or the chat's
+   model when that is `null`.
+2. The summary is stored in the archive (`data/memory.db`). Saving the same chat again
+   **replaces** its summary instead of adding a duplicate.
+3. The UI shows **“Saved to memory: <title>”**.
+
+For very long chats, only the newest messages that fit into
+`memory.archive.maxTranscriptChars` (default 60,000 characters) are summarized, and the
+summary notes how many earlier messages were left out.
+
+Archive entries remain when you delete the chat they came from. Delete them in Memory →
+**Saved conversations**.
+
+### Archive: retrieval (hybrid search)
+
+Before each request, the latest user message(s) are used to search the archive, and up to
+`retrieval.topK` entries (default 4, within `retrieval.maxInjectChars`) are added to the
+system prompt as “Relevant notes from earlier conversations”. The summary of the current
+chat itself is excluded.
+
+The search combines two methods:
+
+| Method | Finds | Technology |
+|--------|-------|------------|
+| **Keyword** (always on) | exact terms: names, part numbers (`STM32F407`), commands, error codes | SQLite FTS5 with BM25 ranking; Unicode tokenizer, works for Persian, English and German |
+| **Semantic / vector** (needs an embedding model) | the same meaning in other words or languages (“deadline” ↔ «مهلت») | embeddings from the provider's `/embeddings` endpoint, cosine similarity |
+
+The two rankings are merged with **Reciprocal Rank Fusion** (RRF,
+`score = Σ 1 / (k + rank)`, `retrieval.rrfK`). Vector hits below
+`retrieval.minSimilarity` are ignored.
+
+#### Enabling vector search
+
+Set an embedding model in `config.json`:
+
+```json
+"embedding": { "providerId": "openrouter", "modelId": "openai/text-embedding-3-small", "dimensions": null }
+```
+
+- OpenRouter lists its embedding models at `GET https://openrouter.ai/api/v1/embeddings/models`.
+- Clean APIs: `GET /v1/models` and filter on `"type": "embedding"`.
+
+After a restart the Memory dialog shows “search: hybrid”. Existing entries are embedded
+automatically in the background, and the same happens after you **change** the model:
+each vector stores the model it was made with, so vectors from different models are never
+mixed. Cost: one small embedding call per chat message (the query) plus one per saved
+summary.
+
+#### Storage and scale
+
+- `data/memory.db` is a SQLite database opened with Node's built-in `node:sqlite`, so
+  there is no extra service to install. Table `entries`: text plus the vector as a
+  Float32 BLOB. FTS5 table `entries_fts`: keyword index.
+- Vector search is an exact brute-force cosine scan over an in-memory cache of all
+  vectors: about 6 KB of RAM per entry at 1,536 dimensions. Measured on Node.js 22,
+  **20,000 entries × 1,536 dimensions take about 40–55 ms per query and about 123 MB of
+  RAM**, which is plenty for a personal assistant. On a small free VM, choose a model with
+  fewer dimensions (or set `embedding.dimensions`, e.g. 512) to cut RAM usage. Millions
+  of entries would need a dedicated vector database (Qdrant, pgvector); that is not built
+  in.
+- `node:sqlite` is marked *experimental* in Node.js 22. The start scripts pass
+  `--disable-warning=ExperimentalWarning` to hide the notice. Back up `data/memory.db`
+  together with the rest of `data/`.
+
 ### Privacy note
 
-Memory is stored in `data/memory.json` on your server. Facts are sent to whichever provider
-and model you chat with, and to the extraction model.
+Facts are stored in `data/memory.json`, and archive summaries in `data/memory.db`, on your
+server. Both are sent to whichever provider and model you chat with; facts also go to the
+extraction model, transcripts to the summarizer, and summaries and queries to the embedding
+model.
 
 ---
 

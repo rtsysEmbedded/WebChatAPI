@@ -627,6 +627,7 @@ window.App = (() => {
           const lines = [];
           if (data.added.length) lines.push(t('memory.updated', { facts: data.added.map((m) => m.text).join(' · ') }));
           if (data.removed.length) lines.push(t('memory.removed', { facts: data.removed.map((m) => m.text).join(' · ') }));
+          if (data.saved) lines.push(t('memory.saved', { title: data.saved.title }));
           if (data.error) lines.push(t('memory.failed', { error: data.error }));
           toast(lines.join('\n'));
         }
@@ -650,6 +651,7 @@ window.App = (() => {
       if (node && state.current === conv) {
         if (!conv.messages.some((m) => m.id === assistant.id)) conv.messages.push(assistant);
         renderMessages();
+        updateSaveButton();
       }
       $('prompt').focus();
     }
@@ -810,7 +812,29 @@ window.App = (() => {
     renderCharacterPicker();
     updateCharacterLabel();
     updateModelLabel();
+    updateSaveButton();
     $('prompt').focus();
+  }
+
+  function updateSaveButton() {
+    $('save-chat').hidden = !(state.cfg.memory.archive.enabled && state.current && state.current.messages.length);
+  }
+
+  // Summarize the whole current chat into the long-term archive.
+  async function saveChatToMemory() {
+    const conv = state.current;
+    if (!conv) return;
+    const btn = $('save-chat');
+    btn.disabled = true;
+    toast(t('memory.saving'));
+    try {
+      const entry = await Api.post(`/api/conversations/${conv.id}/remember`);
+      toast(t('memory.saved', { title: entry.title }));
+    } catch (err) {
+      toastError(err);
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   function newChat() {
@@ -866,6 +890,7 @@ window.App = (() => {
     $('stop-button').addEventListener('click', stop);
     $('attach-button').addEventListener('click', () => $('file-input').click());
     $('file-input').accept = fileAccept();
+    $('save-chat').addEventListener('click', saveChatToMemory);
     $('open-memory').addEventListener('click', () => { closeSidebar(); Features.openMemory(); });
     $('open-characters').addEventListener('click', () => { closeSidebar(); Features.openCharacters(); });
     $('file-input').addEventListener('change', (e) => { addFiles([...e.target.files]); e.target.value = ''; });
