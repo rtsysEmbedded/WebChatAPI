@@ -17,6 +17,7 @@
   <script src="/js/render.js" defer></script>
   <script src="/js/models.js" defer></script>
   <script src="/js/app.js" defer></script>
+  <script src="/js/features.js" defer></script>
 </head>
 <body>
   <!-- Boot / loading -->
@@ -47,6 +48,14 @@
       </div>
       <nav id="conv-list" class="conv-list" aria-label=""></nav>
       <div class="sidebar-bottom">
+        <button id="open-memory" class="btn ghost block side-link">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M12 3a7 7 0 00-4 12.7V19h8v-3.3A7 7 0 0012 3zM9 22h6"/></svg>
+          <span data-i18n="sidebar.memory"></span>
+        </button>
+        <button id="open-characters" class="btn ghost block side-link">
+          <svg viewBox="0 0 24 24" class="icon"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 4.5a3.5 3.5 0 010 7M21.5 20a6.5 6.5 0 00-4-6"/></svg>
+          <span data-i18n="sidebar.characters"></span>
+        </button>
         <label class="row gap">
           <span class="muted small" data-i18n="sidebar.theme"></span>
           <select id="theme-select" class="input small">
@@ -69,6 +78,7 @@
         <button id="toggle-sidebar" class="icon-btn" data-i18n-title="topbar.toggleSidebar">
           <svg viewBox="0 0 24 24" class="icon"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
+        <span id="character-label" class="character-label" hidden></span>
         <button id="model-button" class="model-button">
           <span id="model-button-label"></span>
           <svg viewBox="0 0 24 24" class="icon small"><path d="M6 9l6 6 6-6"/></svg>
@@ -84,6 +94,10 @@
           <img src="/icon.svg" alt="" width="56" height="56">
           <h2 data-i18n="chat.emptyTitle"></h2>
           <p class="muted" data-i18n="chat.emptyHint"></p>
+          <div id="character-picker" class="character-picker" hidden>
+            <p class="muted small" data-i18n="characters.pick"></p>
+            <div id="character-chips" class="chips"></div>
+          </div>
         </div>
       </div>
 
@@ -93,7 +107,7 @@
           <button type="button" id="attach-button" class="icon-btn" data-i18n-title="chat.attach">
             <svg viewBox="0 0 24 24" class="icon"><path d="M21 12.5l-8.5 8.5a5 5 0 01-7-7L14 5.5a3.3 3.3 0 014.7 4.7L10.2 18.7a1.7 1.7 0 01-2.4-2.4L15.5 8.6"/></svg>
           </button>
-          <input type="file" id="file-input" accept="image/*" multiple hidden>
+          <input type="file" id="file-input" multiple hidden>
           <textarea id="prompt" rows="1" dir="auto" data-i18n-placeholder="chat.placeholder"></textarea>
           <button type="submit" id="send-button" class="icon-btn send" data-i18n-title="chat.send">
             <svg viewBox="0 0 24 24" class="icon"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -146,6 +160,10 @@
           <span data-i18n="settings.maxTokens"></span>
           <input id="set-max" type="number" min="1" class="input" data-i18n-placeholder="settings.maxTokensHint">
         </label>
+        <label class="row gap check" id="set-memory-field">
+          <input type="checkbox" id="set-memory">
+          <span data-i18n="settings.useMemory"></span>
+        </label>
         <label class="field" id="set-effort-field">
           <span data-i18n="settings.reasoningEffort"></span>
           <select id="set-effort" class="input"></select>
@@ -154,6 +172,89 @@
       <div class="dialog-foot">
         <button type="button" class="btn ghost" data-close data-i18n="common.cancel"></button>
         <button type="submit" id="settings-save" class="btn primary" data-i18n="common.save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Memory manager -->
+  <dialog id="memory-dialog" class="dialog wide">
+    <div class="dialog-head">
+      <h3 data-i18n="memory.title"></h3>
+      <button type="button" id="memory-clear" class="btn ghost small danger" data-i18n="memory.clearAll"></button>
+      <button type="button" class="icon-btn" data-close data-i18n-title="common.close">
+        <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialog-tools">
+      <p class="muted small" id="memory-hint"></p>
+      <form id="memory-form" class="row gap">
+        <input id="memory-input" class="input" dir="auto" data-i18n-placeholder="memory.placeholder">
+        <button type="submit" class="btn primary" data-i18n="memory.add"></button>
+      </form>
+    </div>
+    <div id="memory-list" class="item-list"></div>
+  </dialog>
+
+  <!-- Characters list -->
+  <dialog id="characters-dialog" class="dialog wide">
+    <div class="dialog-head">
+      <h3 data-i18n="characters.title"></h3>
+      <button type="button" id="character-new" class="btn primary small" data-i18n="characters.new"></button>
+      <button type="button" class="icon-btn" data-close data-i18n-title="common.close">
+        <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="characters-list" class="item-list"></div>
+  </dialog>
+
+  <!-- Character editor -->
+  <dialog id="character-dialog" class="dialog">
+    <form method="dialog" id="character-form">
+      <div class="dialog-head">
+        <h3 id="character-form-title"></h3>
+        <button type="button" class="icon-btn" data-close data-i18n-title="common.close">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="row gap">
+          <label class="field avatar-field">
+            <span data-i18n="characters.avatar"></span>
+            <input id="ch-avatar" class="input center">
+          </label>
+          <label class="field grow">
+            <span data-i18n="characters.name"></span>
+            <input id="ch-name" class="input" dir="auto" required>
+          </label>
+        </div>
+        <label class="field">
+          <span data-i18n="characters.description"></span>
+          <input id="ch-description" class="input" dir="auto">
+        </label>
+        <label class="field">
+          <span data-i18n="characters.systemPrompt"></span>
+          <textarea id="ch-system" rows="6" dir="auto" class="input" data-i18n-placeholder="characters.systemPromptHint"></textarea>
+        </label>
+        <div class="field">
+          <span data-i18n="characters.model"></span>
+          <div class="row gap">
+            <span id="ch-model-label" class="grow muted small"></span>
+            <button type="button" id="ch-model-choose" class="btn small" data-i18n="characters.chooseModel"></button>
+            <button type="button" id="ch-model-clear" class="btn ghost small" data-i18n="characters.clearModel"></button>
+          </div>
+        </div>
+        <label class="field">
+          <span data-i18n="characters.temperature"></span>
+          <input id="ch-temp" type="number" class="input" data-i18n-placeholder="characters.temperatureNone">
+        </label>
+        <label class="row gap check">
+          <input type="checkbox" id="ch-memory">
+          <span data-i18n="characters.useMemory"></span>
+        </label>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost" data-close data-i18n="common.cancel"></button>
+        <button type="submit" class="btn primary" data-i18n="common.save"></button>
       </div>
     </form>
   </dialog>

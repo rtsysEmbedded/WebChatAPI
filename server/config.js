@@ -17,6 +17,8 @@ function resolvePath(p) {
 }
 
 const config = readJson(CONFIG_FILE);
+// Prompt text sent to models (memory block, extraction instruction, file wrapper).
+const prompts = readJson(resolvePath(config.prompts.file));
 
 const i18n = {};
 for (const lang of config.app.languages) {
@@ -102,9 +104,16 @@ function loadSecrets() {
   return s;
 }
 
+// Fill {name} placeholders in a template string.
+function fill(template, vars) {
+  return String(template).replace(/\{(\w+)\}/g, (m, name) => (name in vars ? String(vars[name]) : m));
+}
+
 module.exports = {
   ROOT,
   config,
+  prompts,
+  fill,
   i18n,
   t,
   log,

@@ -7,7 +7,10 @@ Browser (public/)                Node.js server (server/)                 Provid
 ─────────────────                ────────────────────────                 ─────────
 index.html + js/*.js  ── JSON ─▶  index.js  (router, auth gate)
                       ◀─ SSE ──   ├─ auth.js       PIN hash, tokens, lockout
-                                  ├─ storage.js    JSON files in data/
+                                  ├─ storage.js    JSON files in data/ (chats, uploads, memory, characters)
+                                  ├─ context.js    system prompt, memory, attachments → upstream messages
+                                  ├─ features.js   uploads, memory and character endpoints
+                                  ├─ extract.js    PDF / DOCX / text extraction
                                   ├─ providers.js  ── HTTPS + Bearer key ─▶ /models
                                   │                ◀── SSE (OpenAI format) ─ /chat/completions
                                   ├─ http.js       body parsing, static files, headers
@@ -34,13 +37,17 @@ Design choices:
 config/
   config.json            all settings
   i18n/en.json, fa.json  all text (ui / server.log / server.errors / server.cli)
+  prompts.json           all text sent to models (memory block, extraction, file wrapper)
   secrets.json           (git-ignored) PIN hash, session secret, optional keys
 server/
   index.js               bootstrap, routes, chat streaming
   config.js              loads JSON config, translations, secrets; t() and log()
   auth.js                scrypt PIN hashing, session tokens, brute-force limiter
-  providers.js           model listing and normalisation, SSE parsing, chat streaming
-  storage.js             conversation persistence (atomic writes, index)
+  providers.js           model listing and normalisation, request building, SSE parsing
+  context.js             system prompt assembly, attachments, memory extraction
+  features.js            uploads, memory and character HTTP handlers
+  extract.js             text extraction (pdfjs-dist, mammoth)
+  storage.js             persistence (atomic writes, index, uploads, list stores)
   http.js                HTTP helpers, static files, security headers
   cli/set-pin.js         `npm run set-pin`
   cli/selftest.js        `npm run check`
@@ -51,8 +58,9 @@ public/
   js/api.js              fetch wrapper and SSE client
   js/render.js           Markdown → DOMPurify → DOM, code blocks
   js/models.js           model picker dialog
-  js/app.js              application state, sidebar, chat, composer
-data/                    (git-ignored) index.json + conversations/<uuid>.json
+  js/app.js              application state, sidebar, chat, composer, attachments
+  js/features.js         memory manager and character editor dialogs
+data/                    (git-ignored) index.json, conversations/, uploads/, memory.json, characters.json
 ```
 
 ## HTTP API
@@ -78,9 +86,16 @@ the UI translates `<code>` via `ui.errors.<code>`.
 | GET | `/api/conversations` | Summaries, pinned first, then newest first. |
 | POST | `/api/conversations` | Create. Body: `providerId`, `modelId` (required), `systemPrompt`, `temperature`, `maxTokens`, `reasoningEffort`. |
 | GET | `/api/conversations/:id` | Full conversation including messages. |
-| PATCH | `/api/conversations/:id` | Update `title`, `providerId`, `modelId`, `systemPrompt`, `temperature`, `maxTokens`, `reasoningEffort`, `pinned`. Other fields are ignored. |
+| PATCH | `/api/conversations/:id` | Update `title`, `providerId`, `modelId`, `systemPrompt`, `temperature`, `maxTokens`, `reasoningEffort`, `pinned`, `characterId`, `useMemory`. Other fields are ignored. |
 | DELETE | `/api/conversations/:id` | Delete. |
 | POST | `/api/conversations/:id/chat` | Send a message and stream the answer (below). |
+| POST | `/api/uploads` | Upload one file. Raw body; headers `Content-Type` and `X-File-Name` (URI-encoded). Returns `{ id, name, mime, kind, size, textChars, truncated, pages, conversationId: null }`. Errors: `unsupportedFile` (415), `fileTooLarge` (413), `emptyFile`, `extractFailed` (422). |
+| GET | `/api/uploads/:id` | The file. Images and videos inline (with `Range` support), documents as a download. |
+| DELETE | `/api/uploads/:id` | Delete an upload that is not yet part of a sent message (`409 uploadInUse` otherwise). |
+| GET / POST / DELETE | `/api/memory` | List `{ items }`; add `{ text }`; clear all. |
+| PATCH / DELETE | `/api/memory/:id` | Edit `{ text }`; delete. |
+| GET / POST | `/api/characters` | List `{ items }`; create `{ name, avatar, description, systemPrompt, providerId, modelId, temperature, useMemory }`. |
+| PATCH / DELETE | `/api/characters/:id` | Update (same fields); delete. |
 
 `Model` = `{ id, name, description, contextLength, inputPrice, outputPrice, vision, reasoning }`.
 Prices are USD **per token** (`null` when unknown).
@@ -88,8 +103,8 @@ Prices are USD **per token** (`null` when unknown).
 ### Chat request
 
 ```json
-{ "content": "text", "images": ["data:image/png;base64,..."] }
-{ "content": "new text", "images": [], "editFromMessageId": "<user message id>" }
+{ "content": "text", "attachments": ["<upload id>", "..."] }
+{ "content": "new text", "attachments": [], "editFromMessageId": "<user message id>" }
 { "regenerate": true }
 ```
 
@@ -98,9 +113,10 @@ Prices are USD **per token** (`null` when unknown).
 - **Regenerate:** removes trailing assistant messages and answers the last user message
   again.
 
-Validation errors (`emptyMessage`, `invalidImage`, `imageTooLarge`, `tooManyImages`,
-`providerKeyMissing`, …) return a normal JSON error **before** the stream starts, and
-nothing is stored.
+Validation errors (`emptyMessage`, `invalidFile`, `tooManyFiles`, `providerKeyMissing`,
+`requestTooLarge`, …) return a normal JSON error **before** the stream starts, and nothing
+is stored. The full upstream request is built and size-checked before the user message
+is saved.
 
 ### Chat stream (server → browser)
 
@@ -112,7 +128,8 @@ nothing is stored.
 | `start` | `{ conversation, messages, assistantId }` | The user message is saved; `messages` is the stored history. |
 | `delta` | `{ type: "content" \| "reasoning", text }` | Next piece of answer or reasoning text. |
 | `usage` | `{ usage: { prompt_tokens, completion_tokens, ... } }` | Token usage, when the provider sends it. |
-| `done` | `{ message, conversation }` | The final assistant message as stored, including `error`, `stopped` and `usage`. |
+| `done` | `{ message, conversation }` | The final assistant message as stored, including `error`, `stopped` and `usage`. The answer is complete; the UI finishes here. |
+| `memory` | `{ added: [{ id, text, ... }] }` | Optional, after `done`: facts added by automatic memory extraction. The stream then ends. |
 
 Provider errors, including error frames sent in the middle of a stream (for example
 `data: {"error":{...}}` from Clean APIs), do not break the protocol. They end up in
@@ -145,6 +162,14 @@ Request body sent to `<baseUrl><chatPath>`:
 }
 ```
 
+User messages with attachments: document text (PDF/DOCX/text) is prepended to the
+message text as `<attached_file name="…">…</attached_file>` blocks. Images become
+`{ "type": "image_url", "image_url": { "url": "data:…" } }` parts and videos
+`{ "type": "video_url", "video_url": { "url": "data:…" } }` parts. Without media parts
+the content stays a plain string, for maximum provider compatibility. The system prompt
+is `character.systemPrompt`, `conversation.systemPrompt` and the memory block, joined by
+`prompts.systemJoiner`, with empty parts omitted.
+
 `temperature`, `max_tokens` and `reasoning_effort` are only sent when set (and
 `reasoning_effort` only for providers with `supportsReasoningEffort`). Reasoning text
 from earlier turns is **not** sent back to the model.
@@ -163,9 +188,10 @@ field from `reasoningFields`, and `usage`.
   "id": "uuid", "title": "…", "createdAt": "ISO", "updatedAt": "ISO",
   "providerId": "openrouter", "modelId": "anthropic/…",
   "systemPrompt": "", "temperature": 0.7, "maxTokens": null, "reasoningEffort": "",
-  "pinned": false,
+  "pinned": false, "characterId": null, "useMemory": true,
   "messages": [
-    { "id": "uuid", "role": "user", "content": "…", "images": [], "createdAt": "ISO" },
+    { "id": "uuid", "role": "user", "content": "…", "createdAt": "ISO",
+      "attachments": [ { "id": "uuid", "name": "a.pdf", "kind": "pdf", "mime": "application/pdf", "size": 1234, "truncated": false } ] },
     { "id": "uuid", "role": "assistant", "content": "…", "reasoning": "…",
       "providerId": "…", "modelId": "…", "createdAt": "ISO",
       "usage": { "prompt_tokens": 0, "completion_tokens": 0 }, "error": null, "stopped": false }
@@ -179,9 +205,13 @@ conversations. The index is rebuilt from the conversation files if it is missing
 All writes go through one promise chain (no concurrent writes) and use
 write-temp-then-rename, so files are never left half-written.
 
-Images are stored inline as data URLs, which keeps the format self-contained but makes
-conversations with many images large. `chat.maxImageBytes` and
-`chat.maxImagesPerMessage` bound the growth.
+Uploads live in `data/uploads/`: `<id>.bin` (original bytes), `<id>.json` (metadata including
+`conversationId`), and `<id>.txt` (extracted text, documents only). Messages store only
+references. Conversations from before uploads existed may contain inline `images` (data
+URLs); they are still rendered and sent.
+
+`data/memory.json` and `data/characters.json` are `{ "items": [...] }` lists written
+through the same serialized, atomic write queue.
 
 ## Frontend
 

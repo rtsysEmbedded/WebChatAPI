@@ -10,7 +10,7 @@ window.App = (() => {
     convs: [],
     current: null, // full conversation (with messages) or null for a new chat
     draft: null, // settings for a chat that has not been created yet
-    images: [], // pending image data URLs
+    attachments: [], // pending uploads: { key, id, name, kind, size, status, preview }
     stream: null, // { controller }
   };
 
@@ -69,7 +69,7 @@ window.App = (() => {
     b.type = 'button';
     b.title = t(titleKey);
     b.setAttribute('aria-label', b.title);
-    b.append(icon(ICONS[name]));
+    b.append(icon(ICONS[name] || name));
     b.addEventListener('click', (e) => { e.stopPropagation(); onClick(b); });
     return b;
   }
@@ -190,7 +190,7 @@ window.App = (() => {
         lastGroup = g;
       }
       const item = el('div', 'conv-item' + (state.current && state.current.id === c.id ? ' active' : ''));
-      const title = el('span', 'conv-title', c.title || t('sidebar.untitled'));
+      const title = el('span', 'conv-title', characterAvatar(c.characterId) + (c.title || t('sidebar.untitled')));
       title.dir = 'auto';
       const actions = el('span', 'conv-actions');
       actions.append(
@@ -212,7 +212,7 @@ window.App = (() => {
   function upsertSummary(conv) {
     const summary = {
       id: conv.id, title: conv.title, createdAt: conv.createdAt, updatedAt: conv.updatedAt,
-      providerId: conv.providerId, modelId: conv.modelId, pinned: !!conv.pinned,
+      providerId: conv.providerId, modelId: conv.modelId, characterId: conv.characterId || null, pinned: !!conv.pinned,
     };
     state.convs = [summary].concat(state.convs.filter((c) => c.id !== conv.id));
     state.convs.sort((a, b) => (b.pinned - a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
@@ -225,6 +225,7 @@ window.App = (() => {
       if (state.current && state.current.id === id) Object.assign(state.current, { ...c, messages: state.current.messages });
       upsertSummary(c);
       updateModelLabel();
+      updateCharacterLabel();
       return c;
     } catch (err) { toastError(err); return null; }
   }
@@ -261,7 +262,72 @@ window.App = (() => {
       temperature: chat.defaultTemperature,
       maxTokens: chat.defaultMaxTokens,
       reasoningEffort: '',
+      characterId: null,
+      useMemory: state.cfg.memory.defaultOnForNewChats,
     };
+  }
+
+  // ---- Characters -----------------------------------------------------------
+
+  // Selecting a character for a new chat copies its defaults into the draft;
+  // its system prompt is applied by the server on every request.
+  function selectCharacter(ch) {
+    const d = state.draft;
+    const base = newDraft();
+    d.characterId = ch ? ch.id : null;
+    d.temperature = ch && ch.temperature != null ? ch.temperature : base.temperature;
+    d.useMemory = ch ? ch.useMemory !== false : base.useMemory;
+    if (ch && ch.modelId) Object.assign(d, { providerId: ch.providerId, modelId: ch.modelId });
+    renderCharacterPicker();
+    updateCharacterLabel();
+    updateModelLabel();
+  }
+
+  function renderCharacterPicker() {
+    const box = $('character-chips');
+    const list = Features.characters;
+    $('character-picker').hidden = !!state.current || !list.length;
+    box.innerHTML = '';
+    const current = state.draft ? state.draft.characterId : null;
+    const chip = (ch) => {
+      const b = el('button', 'chip' + ((ch ? ch.id : null) === current ? ' active' : ''));
+      b.type = 'button';
+      b.append(el('span', null, ch ? ch.avatar : state.cfg.characters.defaultAvatar));
+      const name = el('span', null, ch ? ch.name : t('characters.default'));
+      name.dir = 'auto';
+      b.append(name);
+      if (ch && ch.description) b.title = ch.description;
+      b.addEventListener('click', () => selectCharacter(ch));
+      return b;
+    };
+    box.append(chip(null), ...list.map(chip));
+  }
+
+  function updateCharacterLabel() {
+    const s = settingsSource();
+    const ch = s && s.characterId ? Features.getCharacter(s.characterId) : null;
+    const label = $('character-label');
+    label.hidden = !ch;
+    if (ch) {
+      label.textContent = `${ch.avatar} ${ch.name}`;
+      label.dir = 'auto';
+      label.title = ch.description || ch.name;
+    }
+  }
+
+  function characterAvatar(id) {
+    const ch = id ? Features.getCharacter(id) : null;
+    return ch ? `${ch.avatar} ` : '';
+  }
+
+  function onCharactersChanged() {
+    if (!state.cfg) return;
+    if (state.draft && state.draft.characterId && !Features.getCharacter(state.draft.characterId)) {
+      state.draft.characterId = null;
+    }
+    renderCharacterPicker();
+    updateCharacterLabel();
+    renderConvList();
   }
 
   function ensureDraftModel() {
@@ -316,6 +382,8 @@ window.App = (() => {
     }
     effort.value = s.reasoningEffort || '';
     $('set-effort-field').hidden = !providerSupportsEffort(s.providerId);
+    $('set-memory').checked = s.useMemory !== false;
+    $('set-memory-field').hidden = !state.cfg.memory.enabled;
     $('settings-dialog').showModal();
   }
 
@@ -327,6 +395,7 @@ window.App = (() => {
       temperature: parseFloat($('set-temp').value),
       maxTokens: Number.isInteger(max) && max > 0 ? max : null,
       reasoningEffort: $('set-effort').value,
+      useMemory: $('set-memory').checked,
     };
     $('settings-dialog').close();
     if (state.current) await updateConv(state.current.id, patch);
@@ -362,6 +431,7 @@ window.App = (() => {
     const wrap = el('div', 'msg user');
     wrap.dataset.id = m.id;
     if (m.images && m.images.length) {
+      // Inline images from conversations created before uploads existed.
       const imgs = el('div', 'msg-images');
       for (const src of m.images) {
         const img = el('img');
@@ -370,6 +440,11 @@ window.App = (() => {
         imgs.append(img);
       }
       wrap.append(imgs);
+    }
+    if (m.attachments && m.attachments.length) {
+      const files = el('div', 'msg-files');
+      for (const a of m.attachments) files.append(renderSentAttachment(a));
+      wrap.append(files);
     }
     if (m.content) {
       const bubble = el('div', 'bubble', m.content);
@@ -454,8 +529,9 @@ window.App = (() => {
     ta.focus();
     cancel.addEventListener('click', () => wrap.replaceChildren(...old));
     save.addEventListener('click', () => {
-      if (!ta.value.trim() && !(m.images && m.images.length)) return;
-      runChat({ content: ta.value, images: m.images || [], editFromMessageId: m.id });
+      const ids = (m.attachments || []).map((a) => a.id);
+      if (!ta.value.trim() && !ids.length) return;
+      runChat({ content: ta.value, attachments: ids, editFromMessageId: m.id });
     });
   }
 
@@ -470,12 +546,17 @@ window.App = (() => {
     if (e) e.preventDefault();
     if (state.stream) return;
     const content = $('prompt').value;
-    const images = state.images.slice();
-    if (!content.trim() && !images.length) return;
+    if (state.attachments.some((a) => a.status === 'uploading')) { toast(t('chat.uploading')); return; }
+    const ready = state.attachments.filter((a) => a.status === 'ready');
+    if (!content.trim() && !ready.length) return;
     const s = settingsSource();
     if (!s.modelId) { openModelPicker(); return; }
+
     const model = Models.find(s.providerId, s.modelId);
-    if (images.length && model && !model.vision) toast(t('chat.noVisionWarning'));
+    if (model && ready.some((a) => a.kind === 'image') && !model.vision) toast(t('chat.noVisionWarning'));
+    if (model && ready.some((a) => a.kind === 'video') && !model.video) {
+      if (!(await ask(t('chat.noVideoWarning'), { okKey: 'chat.sendAnyway' }))) return;
+    }
 
     if (!state.current) {
       try {
@@ -483,17 +564,19 @@ window.App = (() => {
         state.current = c;
         upsertSummary(c);
         history.replaceState(null, '', `#/c/${c.id}`);
+        renderCharacterPicker();
       } catch (err) { toastError(err); return; }
     }
+    const pending = state.attachments;
     $('prompt').value = '';
     autosize();
-    state.images = [];
+    state.attachments = [];
     renderAttachments();
-    if (!(await runChat({ content, images }))) {
-      // Nothing was stored server-side: give the user their text back.
+    if (!(await runChat({ content, attachments: ready.map((a) => a.id) }))) {
+      // Nothing was stored server-side: give the user their text and files back.
       $('prompt').value = content;
       autosize();
-      state.images = images;
+      state.attachments = pending;
       renderAttachments();
     }
   }
@@ -507,6 +590,7 @@ window.App = (() => {
 
     const assistant = { id: null, role: 'assistant', content: '', reasoning: '', modelId: conv.modelId, usage: null, error: null };
     let node = null;
+    let finished = false;
     let frame = 0;
     const paint = () => {
       frame = 0;
@@ -538,15 +622,26 @@ window.App = (() => {
           Object.assign(assistant, data.message);
           Object.assign(conv, data.conversation);
           upsertSummary(conv);
+          finish(); // the answer is complete; a 'memory' event may still follow
+        } else if (event === 'memory') {
+          toast(t('memory.updated', { facts: data.added.map((m) => m.text).join(' · ') }));
         }
       }, controller.signal);
     } catch (err) {
+      if (finished) return !!node; // connection closed after the answer was complete
       if (err.name === 'AbortError') assistant.stopped = true;
       else if (!node) toastError(err);
       else assistant.error = errorText(err);
     } finally {
+      finish();
+    }
+    return !!node;
+
+    function finish() {
+      if (finished) return;
+      finished = true;
       if (frame) cancelAnimationFrame(frame);
-      state.stream = null;
+      if (state.stream && state.stream.controller === controller) state.stream = null;
       setStreaming(false);
       if (node && state.current === conv) {
         if (!conv.messages.some((m) => m.id === assistant.id)) conv.messages.push(assistant);
@@ -554,7 +649,6 @@ window.App = (() => {
       }
       $('prompt').focus();
     }
-    return !!node;
   }
 
   function stop() {
@@ -563,37 +657,130 @@ window.App = (() => {
 
   // ---- Attachments ----------------------------------------------------------
 
+  const KIND_ICONS = { pdf: '📕', docx: '📘', text: '📄', video: '🎬', image: '🖼️' };
+
+  function formatSize(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let n = bytes;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+  }
+
+  // Classify like the server does (extension first, then MIME type) so that
+  // obviously unsupported or oversized files are rejected before uploading.
+  function classify(file) {
+    const kinds = state.cfg.attachments.kinds;
+    const dot = file.name.lastIndexOf('.');
+    const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : '';
+    for (const [kind, k] of Object.entries(kinds)) if (k.extensions.includes(ext)) return kind;
+    for (const [kind, k] of Object.entries(kinds)) if (k.mimeTypes.includes(file.type)) return kind;
+    return null;
+  }
+
+  function fileChip(tag, a, sub) {
+    const chip = el(tag, 'file-chip');
+    chip.append(el('span', 'file-icon', KIND_ICONS[a.kind] || KIND_ICONS.text));
+    const meta = el('span', 'file-meta');
+    const name = el('span', 'file-name', a.name);
+    name.title = a.name;
+    meta.append(name, el('span', 'file-sub', sub));
+    chip.append(meta);
+    return chip;
+  }
+
+  function attachmentInfo(a) {
+    const parts = [formatSize(a.size)];
+    if (a.pages) parts.push(t('chat.pages', { n: a.pages }));
+    if (a.truncated) parts.push(t('chat.truncated'));
+    return parts.join(' · ');
+  }
+
+  function renderSentAttachment(a) {
+    const url = `/api/uploads/${a.id}`;
+    if (a.kind === 'image') {
+      const img = el('img');
+      img.src = url;
+      img.alt = a.name;
+      img.loading = 'lazy';
+      return img;
+    }
+    if (a.kind === 'video') {
+      const v = el('video');
+      v.src = url;
+      v.controls = true;
+      v.preload = 'metadata';
+      return v;
+    }
+    const link = fileChip('a', a, attachmentInfo(a));
+    link.href = url;
+    link.download = a.name;
+    link.title = t('chat.download');
+    return link;
+  }
+
   function renderAttachments() {
     const box = $('attachments');
     box.innerHTML = '';
-    box.hidden = !state.images.length;
-    state.images.forEach((src, i) => {
-      const a = el('div', 'attachment');
-      const img = el('img');
-      img.src = src;
-      img.alt = '';
+    box.hidden = !state.attachments.length;
+    for (const a of state.attachments) {
+      const wrap = el('div', `attachment ${a.status === 'uploading' ? 'uploading' : ''} ${a.status === 'error' ? 'failed' : ''}`);
+      let preview;
+      if (a.kind === 'image' && a.preview) {
+        preview = el('img');
+        preview.src = a.preview;
+        preview.alt = a.name;
+      } else if (a.kind === 'video' && a.preview) {
+        preview = el('video');
+        preview.src = a.preview;
+        preview.muted = true;
+      } else {
+        const sub = a.status === 'uploading' ? t('chat.uploading') : a.status === 'error' ? a.error : attachmentInfo(a);
+        preview = fileChip('div', a, sub);
+      }
+      preview.title = a.status === 'error' ? a.error : a.name;
       const rm = el('button', null, '×');
       rm.type = 'button';
-      rm.title = t('chat.removeImage');
-      rm.addEventListener('click', () => { state.images.splice(i, 1); renderAttachments(); });
-      a.append(img, rm);
-      box.append(a);
-    });
+      rm.title = t('chat.removeFile');
+      rm.addEventListener('click', () => removeAttachment(a));
+      wrap.append(preview, rm);
+      box.append(wrap);
+    }
+  }
+
+  function removeAttachment(a) {
+    state.attachments = state.attachments.filter((x) => x !== a);
+    if (a.preview) URL.revokeObjectURL(a.preview);
+    if (a.id) Api.del(`/api/uploads/${a.id}`).catch(() => {});
+    renderAttachments();
   }
 
   function addFiles(files) {
-    const chat = state.cfg.chat;
+    const cfg = state.cfg.attachments;
     for (const f of files) {
-      if (!chat.allowedImageTypes.includes(f.type)) { toast(t('errors.invalidImage')); continue; }
-      if (f.size > chat.maxImageBytes) {
-        toast(t('errors.imageTooLarge', { max: Math.round(chat.maxImageBytes / 1048576) }));
+      if (state.attachments.length >= cfg.maxFilesPerMessage) { toast(t('errors.tooManyFiles')); break; }
+      const kind = classify(f);
+      if (!kind) { toast(t('errors.unsupportedFile', { provider: f.name })); continue; }
+      if (f.size > cfg.kinds[kind].maxBytes) {
+        toast(`${t('errors.fileTooLarge')} ${f.name} (${formatSize(f.size)} > ${formatSize(cfg.kinds[kind].maxBytes)})`);
         continue;
       }
-      if (state.images.length >= chat.maxImagesPerMessage) { toast(t('errors.tooManyImages')); break; }
-      const reader = new FileReader();
-      reader.onload = () => { state.images.push(reader.result); renderAttachments(); };
-      reader.readAsDataURL(f);
+      const a = { key: Math.random(), id: null, name: f.name, kind, size: f.size, status: 'uploading' };
+      if (kind === 'image' || kind === 'video') a.preview = URL.createObjectURL(f);
+      state.attachments.push(a);
+      Api.upload(f)
+        .then((meta) => Object.assign(a, meta, { status: 'ready' }))
+        .catch((err) => Object.assign(a, { status: 'error', error: errorText(err) }))
+        .finally(() => {
+          if (a.status === 'error') toast(`${a.name}: ${a.error}`);
+          renderAttachments();
+        });
     }
+    renderAttachments();
+  }
+
+  function fileAccept() {
+    return Object.values(state.cfg.attachments.kinds).flatMap((k) => k.extensions).join(',');
   }
 
   // ---- Navigation -----------------------------------------------------------
@@ -616,6 +803,8 @@ window.App = (() => {
     }
     renderConvList();
     renderMessages();
+    renderCharacterPicker();
+    updateCharacterLabel();
     updateModelLabel();
     $('prompt').focus();
   }
@@ -644,8 +833,10 @@ window.App = (() => {
     if (!appStarted) {
       appStarted = true;
       Models.init(state.cfg);
+      Features.init(state.cfg);
       window.addEventListener('hashchange', route);
     }
+    await Features.loadCharacters().catch(toastError);
     await refreshConvs().catch(toastError);
     await route();
     Models.load()
@@ -670,6 +861,9 @@ window.App = (() => {
     $('composer').addEventListener('submit', send);
     $('stop-button').addEventListener('click', stop);
     $('attach-button').addEventListener('click', () => $('file-input').click());
+    $('file-input').accept = fileAccept();
+    $('open-memory').addEventListener('click', () => { closeSidebar(); Features.openMemory(); });
+    $('open-characters').addEventListener('click', () => { closeSidebar(); Features.openCharacters(); });
     $('file-input').addEventListener('change', (e) => { addFiles([...e.target.files]); e.target.value = ''; });
 
     const prompt = $('prompt');
@@ -681,14 +875,14 @@ window.App = (() => {
       }
     });
     prompt.addEventListener('paste', (e) => {
-      const files = [...(e.clipboardData ? e.clipboardData.files : [])].filter((f) => f.type.startsWith('image/'));
+      const files = [...(e.clipboardData ? e.clipboardData.files : [])];
       if (files.length) { e.preventDefault(); addFiles(files); }
     });
     const main = document.querySelector('.main');
     main.addEventListener('dragover', (e) => e.preventDefault());
     main.addEventListener('drop', (e) => {
       e.preventDefault();
-      addFiles([...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')));
+      addFiles([...e.dataTransfer.files]);
     });
 
     document.querySelectorAll('dialog [data-close]').forEach((b) => {
@@ -744,5 +938,5 @@ window.App = (() => {
 
   document.addEventListener('DOMContentLoaded', boot);
 
-  return { toast, toastError };
+  return { toast, toastError, el, iconButton, ask, onCharactersChanged };
 })();

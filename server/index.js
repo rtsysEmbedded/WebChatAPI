@@ -4,7 +4,9 @@ const http = require('http');
 const { config, i18n, log, loadSecrets } = require('./config');
 const auth = require('./auth');
 const storage = require('./storage');
-const { providers, getProvider, listModels, streamChat } = require('./providers');
+const { providers, getProvider, listModels, buildBody, serializeBody, streamChat } = require('./providers');
+const context = require('./context');
+const features = require('./features');
 const H = require('./http');
 
 const A = config.auth;
@@ -67,19 +69,13 @@ function applySettings(target, body) {
     target.reasoningEffort = body.reasoningEffort;
   }
   if (typeof body.pinned === 'boolean') target.pinned = body.pinned;
-  return target;
-}
-
-function validateImages(images) {
-  if (images == null) return [];
-  if (!Array.isArray(images) || images.length > C.maxImagesPerMessage) throw new H.HttpError(400, 'tooManyImages');
-  for (const url of images) {
-    const m = typeof url === 'string' && /^data:([a-z/+.-]+);base64,/.exec(url);
-    if (!m || !C.allowedImageTypes.includes(m[1])) throw new H.HttpError(400, 'invalidImage');
-    const bytes = Math.floor(((url.length - m[0].length) * 3) / 4);
-    if (bytes > C.maxImageBytes) throw new H.HttpError(400, 'imageTooLarge');
+  if (typeof body.useMemory === 'boolean') target.useMemory = body.useMemory;
+  if (body.characterId === null) target.characterId = null;
+  else if (typeof body.characterId === 'string') {
+    if (!storage.characters.get(body.characterId)) throw new H.HttpError(400, 'notFound');
+    target.characterId = body.characterId;
   }
-  return images;
+  return target;
 }
 
 function makeTitle(text) {
@@ -102,10 +98,15 @@ function publicConfig() {
       defaultMaxTokens: C.defaultMaxTokens,
       defaultSystemPrompt: C.defaultSystemPrompt,
       reasoningEfforts: C.reasoningEfforts,
-      maxImageBytes: C.maxImageBytes,
-      maxImagesPerMessage: C.maxImagesPerMessage,
-      allowedImageTypes: C.allowedImageTypes,
     },
+    attachments: config.attachments,
+    memory: {
+      enabled: config.memory.enabled,
+      defaultOnForNewChats: config.memory.defaultOnForNewChats,
+      autoExtract: config.memory.autoExtract.enabled,
+      maxItemChars: config.memory.maxItemChars,
+    },
+    characters: config.characters,
     providers: providers.map((p) => ({
       id: p.id,
       name: p.name,
@@ -165,6 +166,8 @@ async function createConversation(req, res) {
       maxTokens: C.defaultMaxTokens,
       reasoningEffort: '',
       pinned: false,
+      characterId: null,
+      useMemory: config.memory.defaultOnForNewChats,
       messages: [],
     },
     body,
@@ -181,28 +184,45 @@ async function loadConversation(id) {
 }
 
 // POST /api/conversations/:id/chat — streams the answer as Server-Sent Events.
-// Body: { content, images?, regenerate?, editFromMessageId? }
+// Body: { content, attachments?: [uploadId], regenerate?, editFromMessageId? }
 async function chat(req, res, id) {
   const body = await H.readJsonBody(req);
   const c = await loadConversation(id);
   const { p, key } = requireProvider(c.providerId);
   if (!c.modelId) throw new H.HttpError(400, 'modelRequired');
 
+  let attachments = [];
   if (body.regenerate) {
     while (c.messages.length && c.messages[c.messages.length - 1].role === 'assistant') c.messages.pop();
     if (!c.messages.length) throw new H.HttpError(400, 'nothingToRegenerate');
   } else {
     const content = typeof body.content === 'string' ? body.content : '';
-    const images = validateImages(body.images);
-    if (!content.trim() && !images.length) throw new H.HttpError(400, 'emptyMessage');
+    attachments = await features.resolveAttachments(body.attachments, c.id);
+    if (!content.trim() && !attachments.length) throw new H.HttpError(400, 'emptyMessage');
     if (body.editFromMessageId) {
       const idx = c.messages.findIndex((m) => m.id === body.editFromMessageId);
       if (idx < 0 || c.messages[idx].role !== 'user') throw new H.HttpError(400, 'notFound');
       c.messages = c.messages.slice(0, idx);
     }
-    c.messages.push({ id: storage.newId(), role: 'user', content, images, createdAt: now() });
+    c.messages.push({ id: storage.newId(), role: 'user', content, attachments, createdAt: now() });
   }
-  if (!c.title) c.title = makeTitle(c.messages.find((m) => m.role === 'user').content);
+  const userMsg = c.messages[c.messages.length - 1];
+
+  // Build and size-check the upstream request before anything is stored, so
+  // a rejected request leaves the conversation unchanged.
+  let json;
+  try {
+    json = serializeBody(p, buildBody(p, c, await context.upstreamMessages(c, c.messages), true));
+  } catch (err) {
+    if (err.code === 'requestTooLarge') throw new H.HttpError(413, 'requestTooLarge', err.detail);
+    throw err;
+  }
+
+  if (!c.title) {
+    const first = c.messages.find((m) => m.role === 'user');
+    c.title = makeTitle(first.content || (first.attachments && first.attachments[0] && first.attachments[0].name));
+  }
+  for (const a of attachments) await storage.uploads.setConversation(a.id, c.id);
   await storage.save(c);
 
   const assistant = {
@@ -212,6 +232,7 @@ async function chat(req, res, id) {
     reasoning: '',
     providerId: p.id,
     modelId: c.modelId,
+    characterId: c.characterId || null,
     createdAt: now(),
     usage: null,
     error: null,
@@ -224,12 +245,13 @@ async function chat(req, res, id) {
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
-  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const open = () => !res.writableEnded && !res.destroyed;
+  const send = (event, data) => open() && res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   send('start', { conversation: { ...c, messages: undefined }, messages: c.messages, assistantId: assistant.id });
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), C.upstreamTimeoutSeconds * 1000);
-  const keepAlive = setInterval(() => res.write(': ping\n\n'), config.server.sseKeepAliveSeconds * 1000);
+  const keepAlive = setInterval(() => open() && res.write(': ping\n\n'), config.server.sseKeepAliveSeconds * 1000);
   res.on('close', () => {
     if (!res.writableEnded) {
       assistant.stopped = true;
@@ -238,11 +260,11 @@ async function chat(req, res, id) {
   });
 
   try {
-    for await (const ev of streamChat(p, key, c, c.messages, controller.signal)) {
+    for await (const ev of streamChat(p, key, json, controller.signal)) {
       if (ev.type === 'content') assistant.content += ev.text;
       else if (ev.type === 'reasoning') assistant.reasoning += ev.text;
       else if (ev.type === 'usage') assistant.usage = ev.usage;
-      if (!res.writableEnded) send(ev.type === 'usage' ? 'usage' : 'delta', ev);
+      send(ev.type === 'usage' ? 'usage' : 'delta', ev);
     }
   } catch (err) {
     if (!assistant.stopped) {
@@ -251,15 +273,20 @@ async function chat(req, res, id) {
     }
   } finally {
     clearTimeout(timeout);
-    clearInterval(keepAlive);
   }
 
   c.messages.push(assistant);
   await storage.save(c);
-  if (!res.writableEnded) {
-    send('done', { message: assistant, conversation: { ...c, messages: undefined } });
-    res.end();
+  send('done', { message: assistant, conversation: { ...c, messages: undefined } });
+
+  // Long-term memory: runs after the answer is complete, so it never delays
+  // it. The UI is told about new facts through a final 'memory' event.
+  if (!assistant.stopped && !assistant.error && !body.regenerate && open()) {
+    const added = await context.extractMemory(c, userMsg, assistant, secrets.providerKeys);
+    if (added.length) send('memory', { added });
   }
+  clearInterval(keepAlive);
+  if (open()) res.end();
 }
 
 // ---- Router ----------------------------------------------------------------
@@ -303,6 +330,17 @@ async function route(req, res) {
   if (method === 'GET' && path === '/api/models') return models(req, res, url);
   if (method === 'GET' && path === '/api/conversations') return H.sendJson(res, 200, storage.list());
   if (method === 'POST' && path === '/api/conversations') return createConversation(req, res);
+  if (method === 'POST' && path === '/api/uploads') return features.upload(req, res);
+
+  const up = /^\/api\/uploads\/([^/]+)$/.exec(path);
+  if (up && method === 'GET') return features.serveUpload(req, res, up[1]);
+  if (up && method === 'DELETE') return features.deleteUpload(res, up[1]);
+
+  const mem = /^\/api\/memory(?:\/([^/]+))?$/.exec(path);
+  if (mem) return features.memoryRoute(req, res, method, mem[1]);
+
+  const chr = /^\/api\/characters(?:\/([^/]+))?$/.exec(path);
+  if (chr) return features.charactersRoute(req, res, method, chr[1]);
 
   const m = /^\/api\/conversations\/([^/]+)(\/chat)?$/.exec(path);
   if (m) {
@@ -323,6 +361,8 @@ async function route(req, res) {
 
 async function main() {
   await storage.init();
+  await storage.uploads.cleanup();
+  setInterval(() => storage.uploads.cleanup().catch(() => {}), config.attachments.cleanupIntervalMinutes * 60e3).unref();
   if (A.enabled && !secrets.pinHash && secrets.pin) {
     if (!auth.validatePinFormat(secrets.pin)) log('server.log.pinEnvInvalid');
     else secrets.pinHash = await auth.hashPin(secrets.pin);

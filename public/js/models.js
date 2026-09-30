@@ -164,7 +164,7 @@ window.Models = (() => {
       s.textContent = p;
       info.append(s);
     }
-    for (const [flag, key] of [['vision', 'models.vision'], ['reasoning', 'models.reasoning']]) {
+    for (const [flag, key] of [['vision', 'models.vision'], ['video', 'models.video'], ['reasoning', 'models.reasoning']]) {
       if (!m[flag]) continue;
       const s = document.createElement('span');
       s.className = 'badge';

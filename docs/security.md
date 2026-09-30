@@ -100,6 +100,31 @@ connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
   injection.
 - `frame-ancestors 'none'` and `X-Frame-Options: DENY` prevent clickjacking.
 
+## Uploads
+
+- Only logged-in users can upload or download. Uploads are raw request bodies with a
+  per-kind size limit enforced **while streaming** to disk, so a false or missing
+  `Content-Length` cannot bypass it.
+- Allowed types are an allow-list (`attachments.kinds`). Text files containing NUL bytes
+  are rejected as binary. File names are reduced to their base name, with control
+  characters removed.
+- Files are stored under random UUIDs and never under the uploaded name, so there is no
+  path traversal through file names.
+- Served back with `Content-Security-Policy: sandbox` and `X-Content-Type-Options: nosniff`.
+  Only images and videos are served inline; everything else is `Content-Disposition:
+  attachment` with `application/octet-stream`, so an uploaded HTML or SVG file can never
+  run as a page on your origin.
+- Document parsing (`pdfjs-dist` with `isEvalSupported: false`, `mammoth`) runs on the
+  server. Keep dependencies updated (`npm update`, `npm audit`), because parsers are
+  the most exposed code.
+
+## Memory and prompt injection
+
+Automatic memory extraction lets a model write to memory. Text that you paste or attach
+(web pages, documents) could contain instructions that trick the extractor into storing
+false “facts”, which then affect all future chats. Review the memory list (entries are
+marked **auto**) now and then, or disable `memory.autoExtract.enabled`.
+
 ## Static files
 
 Static files are served only from `public/` (after resolving the path, it must stay inside

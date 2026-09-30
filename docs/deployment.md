@@ -2,7 +2,7 @@
 
 WebChatAPI is one Node.js process that needs:
 
-1. Node.js ≥ 20.12, **or** a Docker runtime.
+1. Node.js ≥ 22.13, **or** a Docker runtime.
 2. A few environment variables (API keys, optionally the PIN).
 3. A writable directory for conversations. It must be **persistent** if you want chat
    history to survive restarts and redeploys.
@@ -124,7 +124,7 @@ location / {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_buffering off;              # required for streaming
     proxy_read_timeout 3600s;
-    client_max_body_size 25m;         # >= server.maxJsonBodyBytes
+    client_max_body_size 60m;         # >= the largest attachments.kinds.*.maxBytes (video: 50 MB)
 }
 ```
 

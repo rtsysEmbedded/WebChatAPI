@@ -34,6 +34,7 @@ function normalizeModel(p, raw) {
     inputPrice: toPricePerToken(pick(raw, f.inputPrice), p.priceUnitTokens),
     outputPrice: toPricePerToken(pick(raw, f.outputPrice), p.priceUnitTokens),
     vision: modalities.includes('image') || (p.visionCapability ? caps.includes(p.visionCapability) : false),
+    video: modalities.includes('video') || (p.videoCapability ? caps.includes(p.videoCapability) : false),
     reasoning: caps.includes('reasoning') || caps.includes('include_reasoning'),
   };
 }
@@ -101,50 +102,46 @@ async function* sseJson(body) {
   }
 }
 
-function toUpstreamMessages(conversation, messages) {
-  const out = [];
-  if (conversation.systemPrompt) out.push({ role: 'system', content: conversation.systemPrompt });
-  for (const m of messages) {
-    if (m.role !== 'user' && m.role !== 'assistant') continue;
-    if (m.role === 'assistant' && !m.content) continue;
-    if (m.role === 'user' && m.images && m.images.length) {
-      out.push({
-        role: 'user',
-        content: [
-          { type: 'text', text: m.content || '' },
-          ...m.images.map((url) => ({ type: 'image_url', image_url: { url } })),
-        ],
-      });
-    } else {
-      out.push({ role: m.role, content: m.content });
-    }
-  }
-  return out;
-}
-
-// Stream a chat completion. Yields { type: 'content'|'reasoning'|'usage', ... }
-// and throws on upstream errors (including error frames sent mid-stream).
-async function* streamChat(p, apiKey, conversation, messages, signal) {
-  const body = {
-    ...p.extraBody,
-    model: conversation.modelId,
-    messages: toUpstreamMessages(conversation, messages),
-    stream: true,
-  };
+// Build the request body for /chat/completions. `messages` are already in
+// upstream (OpenAI) format; see context.js.
+function buildBody(p, conversation, messages, stream) {
+  const body = { ...p.extraBody, model: conversation.modelId, messages, stream };
   if (conversation.temperature != null) body.temperature = conversation.temperature;
   let maxTokens = conversation.maxTokens != null ? conversation.maxTokens : config.chat.defaultMaxTokens;
   if (maxTokens != null && p.minMaxTokens != null) maxTokens = Math.max(maxTokens, p.minMaxTokens);
   if (maxTokens != null) body.max_tokens = maxTokens;
   if (p.supportsReasoningEffort && conversation.reasoningEffort) body.reasoning_effort = conversation.reasoningEffort;
+  return body;
+}
 
-  const res = await fetch(p.baseUrl + p.chatPath, {
-    method: 'POST',
-    headers: headersFor(p, apiKey),
-    body: JSON.stringify(body),
-    signal,
-  });
+// Serialize and enforce the provider's documented request-size limit, so an
+// oversized request fails with a clear error instead of an opaque upstream one.
+function serializeBody(p, body) {
+  const json = JSON.stringify(body);
+  const bytes = Buffer.byteLength(json);
+  if (p.maxRequestBytes && bytes > p.maxRequestBytes) {
+    const err = new Error('requestTooLarge');
+    err.code = 'requestTooLarge';
+    err.detail = t('server.errors.requestTooLarge', {
+      size: (bytes / 1e6).toFixed(1),
+      max: (p.maxRequestBytes / 1e6).toFixed(1),
+      provider: p.name,
+    });
+    throw err;
+  }
+  return json;
+}
+
+async function post(p, apiKey, json, signal) {
+  const res = await fetch(p.baseUrl + p.chatPath, { method: 'POST', headers: headersFor(p, apiKey), body: json, signal });
   if (!res.ok) throw new Error(t('server.errors.upstream', { status: res.status, message: await upstreamError(res) }));
+  return res;
+}
 
+// Stream a chat completion. Yields { type: 'content'|'reasoning'|'usage', ... }
+// and throws on upstream errors (including error frames sent mid-stream).
+async function* streamChat(p, apiKey, json, signal) {
+  const res = await post(p, apiKey, json, signal);
   for await (const chunk of sseJson(res.body)) {
     if (chunk.error) {
       const e = chunk.error;
@@ -163,4 +160,24 @@ async function* streamChat(p, apiKey, conversation, messages, signal) {
   }
 }
 
-module.exports = { providers, getProvider, listModels, streamChat, sseJson, normalizeModel, passesFilter };
+// Non-streaming completion; returns the answer text.
+async function complete(p, apiKey, json, signal) {
+  const res = await post(p, apiKey, json, signal);
+  const data = await res.json();
+  if (data.error) throw new Error(t('server.errors.upstream', { status: data.error.code || '-', message: data.error.message }));
+  const msg = data.choices && data.choices[0] && data.choices[0].message;
+  return (msg && typeof msg.content === 'string' && msg.content) || '';
+}
+
+module.exports = {
+  providers,
+  getProvider,
+  listModels,
+  buildBody,
+  serializeBody,
+  streamChat,
+  complete,
+  sseJson,
+  normalizeModel,
+  passesFilter,
+};

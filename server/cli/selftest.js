@@ -7,6 +7,8 @@ const assert = require('assert');
 const { config, i18n } = require('../config');
 const auth = require('../auth');
 const { normalizeModel, sseJson } = require('../providers');
+const { classify } = require('../features');
+const { prompts, fill } = require('../config');
 
 function keys(obj, prefix = '') {
   return Object.entries(obj).flatMap(([k, v]) =>
@@ -60,6 +62,24 @@ async function main() {
   assert.strictEqual(m2.inputPrice, 0.000002);
   assert.strictEqual(m2.outputPrice, null);
   assert.ok(m2.vision && m2.reasoning);
+  assert.ok(!m2.video);
+  const m3 = normalizeModel(or, { id: 'v', architecture: { input_modalities: ['text', 'video'] } });
+  assert.ok(m3.video && !m3.vision);
+
+  // Attachment classification: extension first, then MIME type.
+  assert.strictEqual(classify('main.c', ''), 'text');
+  assert.strictEqual(classify('Report.PDF', 'application/octet-stream'), 'pdf');
+  assert.strictEqual(classify('clip.mov', 'video/quicktime'), 'video');
+  assert.strictEqual(classify('noext', 'image/png'), 'image');
+  assert.strictEqual(classify('tool.exe', 'application/x-msdownload'), null);
+  for (const k of Object.values(config.attachments.kinds)) assert.ok(k.maxBytes > 0 && k.extensions.length);
+
+  // Prompt templates contain the placeholders the code fills in.
+  assert.ok(prompts.memory.block.includes('{items}'));
+  assert.ok(prompts.memory.item.includes('{text}'));
+  for (const v of ['{memory}', '{user}', '{assistant}']) assert.ok(prompts.memory.extract.user.includes(v));
+  assert.ok(prompts.attachments.document.includes('{name}') && prompts.attachments.document.includes('{text}'));
+  assert.strictEqual(fill('a {x} {y}', { x: '{y}' }), 'a {y} {y}'); // substituted text is not re-expanded
 
   // SSE parsing: comments ignored, frames split across chunks, [DONE] stops.
   const enc = new TextEncoder();

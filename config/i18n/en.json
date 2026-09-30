@@ -43,7 +43,9 @@
       "rename": "Rename",
       "delete": "Delete",
       "renamePrompt": "New title for this chat:",
-      "deleteConfirm": "Delete \"{title}\"? This cannot be undone."
+      "deleteConfirm": "Delete \"{title}\"? This cannot be undone.",
+      "memory": "Memory",
+      "characters": "Characters"
     },
     "topbar": {
       "toggleSidebar": "Show chats",
@@ -53,7 +55,7 @@
       "emptyTitle": "How can I help you today?",
       "emptyHint": "Pick a model at the top and start typing.",
       "placeholder": "Message…",
-      "attach": "Attach images",
+      "attach": "Attach files",
       "send": "Send",
       "stop": "Stop generating",
       "disclaimer": "AI models can make mistakes. Verify important information.",
@@ -70,7 +72,13 @@
       "stopped": "stopped",
       "tokens": "{input} in / {output} out tokens",
       "noVisionWarning": "This model may not support images.",
-      "removeImage": "Remove image"
+      "uploading": "Uploading…",
+      "download": "Download",
+      "truncated": "truncated",
+      "pages": "pages: {n}",
+      "noVideoWarning": "The selected model does not report video support. Send anyway?",
+      "sendAnyway": "Send anyway",
+      "removeFile": "Remove file"
     },
     "models": {
       "title": "Select a model",
@@ -86,7 +94,8 @@
       "contextM": "{n}M context",
       "vision": "vision",
       "reasoning": "reasoning",
-      "choose": "Choose a model"
+      "choose": "Choose a model",
+      "video": "video"
     },
     "settings": {
       "title": "Chat settings",
@@ -101,7 +110,8 @@
         "low": "Low",
         "medium": "Medium",
         "high": "High"
-      }
+      },
+      "useMemory": "Use long-term memory in this chat"
     },
     "errors": {
       "internal": "Something went wrong.",
@@ -113,9 +123,6 @@
       "unknownProvider": "Unknown provider.",
       "modelRequired": "Choose a model first.",
       "emptyMessage": "Message is empty.",
-      "invalidImage": "Unsupported image type.",
-      "imageTooLarge": "Image is too large (max {max} MB).",
-      "tooManyImages": "Too many images in one message.",
       "notFound": "Not found.",
       "upstream": "Provider request failed.",
       "payloadTooLarge": "Request is too large.",
@@ -123,7 +130,60 @@
       "unsupportedMediaType": "Unsupported request type.",
       "invalidJson": "Invalid request.",
       "nothingToRegenerate": "Nothing to regenerate.",
-      "methodNotAllowed": "Method not allowed."
+      "methodNotAllowed": "Method not allowed.",
+      "fileTooLarge": "File is too large.",
+      "unsupportedFile": "Unsupported file type: {provider}",
+      "emptyFile": "File is empty.",
+      "invalidFile": "Invalid or unknown file.",
+      "extractFailed": "Could not read the file's text.",
+      "tooManyFiles": "Too many files in one message.",
+      "uploadInUse": "This file belongs to a sent message.",
+      "memoryTooLong": "Memory text is too long.",
+      "memoryFull": "Memory is full. Delete some entries first.",
+      "nameRequired": "A name is required.",
+      "tooManyCharacters": "Maximum number of characters reached.",
+      "requestTooLarge": "The request is too large for this provider."
+    },
+    "memory": {
+      "title": "Memory",
+      "hint": "Facts saved here are shared by all chats and characters. They are added to the system prompt of every chat that has memory switched on.",
+      "autoHint": "New facts are also extracted automatically from your messages.",
+      "placeholder": "Add a fact, e.g. \"I work with STM32 microcontrollers\"",
+      "add": "Add",
+      "empty": "No memories yet.",
+      "edit": "Edit",
+      "delete": "Delete",
+      "clearAll": "Clear all",
+      "clearConfirm": "Delete all {count} memories? This cannot be undone.",
+      "editPrompt": "Edit memory:",
+      "auto": "auto",
+      "manual": "manual",
+      "updated": "Memory updated: {facts}",
+      "disabled": "Memory is disabled in config.json (memory.enabled)."
+    },
+    "characters": {
+      "title": "Characters",
+      "new": "New character",
+      "edit": "Edit",
+      "delete": "Delete",
+      "empty": "No characters yet. Create one to give the assistant a role, a system prompt and a default model.",
+      "deleteConfirm": "Delete the character \"{name}\"? Existing chats keep their messages but lose the character's prompt.",
+      "name": "Name",
+      "avatar": "Emoji",
+      "description": "Description",
+      "systemPrompt": "Instructions (system prompt)",
+      "systemPromptHint": "Who is this character and how should it answer?",
+      "model": "Default model",
+      "modelNone": "None — use the currently selected model",
+      "chooseModel": "Choose",
+      "clearModel": "Clear",
+      "temperature": "Default temperature",
+      "temperatureNone": "Use global default",
+      "useMemory": "Use long-term memory",
+      "default": "Default assistant",
+      "pick": "Choose a character for this chat",
+      "editTitle": "Edit character",
+      "newTitle": "New character"
     }
   },
   "server": {
@@ -144,10 +204,13 @@
       "fatal": "Fatal error: {error}",
       "envLoaded": "Loaded environment variables from {file}",
       "envReadError": "Could not read env file {file}: {error}",
-      "envUnsupported": "This Node.js version cannot load {file}; use Node.js 20.12 or newer, or set the variables in your shell."
+      "envUnsupported": "This Node.js version cannot load {file}; use Node.js 20.12 or newer, or set the variables in your shell.",
+      "uploadsCleaned": "Removed {count} unused uploads",
+      "memoryExtractError": "Memory extraction failed: {error}"
     },
     "errors": {
-      "upstream": "Upstream error {status}: {message}"
+      "upstream": "Upstream error {status}: {message}",
+      "requestTooLarge": "Request is {size} MB, but {provider} accepts at most {max} MB. Remove some attachments or start a new chat."
     },
     "cli": {
       "enterPin": "New PIN: ",

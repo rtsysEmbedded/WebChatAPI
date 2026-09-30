@@ -66,8 +66,26 @@ window.Api = (() => {
     }
   }
 
+  // Upload a File as the raw request body; the server stores it and returns
+  // its metadata ({ id, name, kind, size, ... }).
+  async function upload(file) {
+    const res = await fetch('/api/uploads', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+      credentials: 'same-origin',
+      body: file,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 401) window.dispatchEvent(new Event('auth-expired'));
+      throw new ApiError(res.status, data.error || 'internal', data.detail);
+    }
+    return data;
+  }
+
   return {
     ApiError,
+    upload,
     get: (u) => request('GET', u),
     post: (u, b) => request('POST', u, b || {}),
     patch: (u, b) => request('PATCH', u, b),

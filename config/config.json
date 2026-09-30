@@ -15,7 +15,7 @@
     "hostEnv": "HOST",
     "trustedProxyHops": 1,
     "sseKeepAliveSeconds": 15,
-    "maxJsonBodyBytes": 26214400,
+    "maxJsonBodyBytes": 2097152,
     "publicDir": "public",
     "dataDir": "data",
     "dataDirEnv": "WCA_DATA_DIR",
@@ -28,7 +28,7 @@
     },
     "staticCacheSeconds": 3600,
     "securityHeaders": {
-      "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "no-referrer",
@@ -43,7 +43,8 @@
       ".png": "image/png",
       ".ico": "image/x-icon",
       ".webmanifest": "application/manifest+json",
-      ".woff2": "font/woff2"
+      ".woff2": "font/woff2",
+      ".mjs": "text/javascript; charset=utf-8"
     }
   },
   "auth": {
@@ -92,15 +93,7 @@
       "high"
     ],
     "titleMaxLength": 60,
-    "upstreamTimeoutSeconds": 3600,
-    "maxImageBytes": 5242880,
-    "maxImagesPerMessage": 4,
-    "allowedImageTypes": [
-      "image/png",
-      "image/jpeg",
-      "image/webp",
-      "image/gif"
-    ]
+    "upstreamTimeoutSeconds": 3600
   },
   "ui": {
     "defaultTheme": "system",
@@ -124,6 +117,7 @@
       "extraBody": {},
       "supportsReasoningEffort": false,
       "minMaxTokens": 2048,
+      "maxRequestBytes": 8000000,
       "modelsCacheMinutes": 60,
       "modelFilter": {
         "field": "type",
@@ -143,6 +137,7 @@
       },
       "priceUnitTokens": 1000,
       "visionCapability": "vision",
+      "videoCapability": null,
       "reasoningFields": [
         "reasoning_content",
         "reasoning"
@@ -163,6 +158,7 @@
       "extraBody": {},
       "supportsReasoningEffort": true,
       "minMaxTokens": null,
+      "maxRequestBytes": null,
       "modelsCacheMinutes": 60,
       "modelFilter": {
         "field": "architecture.output_modalities",
@@ -182,11 +178,165 @@
       },
       "priceUnitTokens": 1,
       "visionCapability": null,
+      "videoCapability": null,
       "reasoningFields": [
         "reasoning",
         "reasoning_content"
       ],
       "staticModels": []
     }
-  ]
+  ],
+  "attachments": {
+    "maxFilesPerMessage": 6,
+    "maxTextChars": 200000,
+    "maxPdfPages": 300,
+    "orphanUploadHours": 24,
+    "cleanupIntervalMinutes": 60,
+    "kinds": {
+      "image": {
+        "extensions": [
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".webp",
+          ".gif"
+        ],
+        "mimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/gif"
+        ],
+        "maxBytes": 5242880,
+        "upstreamMime": {}
+      },
+      "video": {
+        "extensions": [
+          ".mp4",
+          ".mpeg",
+          ".mpg",
+          ".mov",
+          ".webm"
+        ],
+        "mimeTypes": [
+          "video/mp4",
+          "video/mpeg",
+          "video/quicktime",
+          "video/webm"
+        ],
+        "maxBytes": 52428800,
+        "upstreamMime": {
+          "video/quicktime": "video/mov"
+        }
+      },
+      "pdf": {
+        "extensions": [
+          ".pdf"
+        ],
+        "mimeTypes": [
+          "application/pdf"
+        ],
+        "maxBytes": 20971520,
+        "upstreamMime": {}
+      },
+      "docx": {
+        "extensions": [
+          ".docx"
+        ],
+        "mimeTypes": [
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+        "maxBytes": 20971520,
+        "upstreamMime": {}
+      },
+      "text": {
+        "extensions": [
+          ".txt",
+          ".md",
+          ".markdown",
+          ".csv",
+          ".tsv",
+          ".json",
+          ".xml",
+          ".yaml",
+          ".yml",
+          ".toml",
+          ".ini",
+          ".log",
+          ".html",
+          ".css",
+          ".js",
+          ".mjs",
+          ".ts",
+          ".jsx",
+          ".tsx",
+          ".py",
+          ".c",
+          ".h",
+          ".cpp",
+          ".hpp",
+          ".cc",
+          ".cs",
+          ".java",
+          ".kt",
+          ".go",
+          ".rs",
+          ".rb",
+          ".php",
+          ".swift",
+          ".sh",
+          ".bat",
+          ".ps1",
+          ".sql",
+          ".r",
+          ".m",
+          ".s",
+          ".asm",
+          ".ld",
+          ".cmake",
+          ".mk",
+          ".dts"
+        ],
+        "mimeTypes": [
+          "text/plain",
+          "text/markdown",
+          "text/csv",
+          "application/json",
+          "application/xml",
+          "text/xml",
+          "text/html",
+          "text/css",
+          "text/javascript"
+        ],
+        "maxBytes": 2097152,
+        "upstreamMime": {}
+      }
+    }
+  },
+  "memory": {
+    "enabled": true,
+    "defaultOnForNewChats": true,
+    "maxItems": 200,
+    "maxItemChars": 500,
+    "autoExtract": {
+      "enabled": true,
+      "providerId": null,
+      "modelId": null,
+      "maxTokens": null,
+      "temperature": null,
+      "timeoutSeconds": 60,
+      "maxAddPerTurn": 3,
+      "maxContextChars": 4000
+    }
+  },
+  "characters": {
+    "maxCount": 100,
+    "nameMaxLength": 80,
+    "avatarMaxLength": 8,
+    "descriptionMaxLength": 300,
+    "defaultAvatar": "🤖"
+  },
+  "prompts": {
+    "file": "config/prompts.json"
+  }
 }

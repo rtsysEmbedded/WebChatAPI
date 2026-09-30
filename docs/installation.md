@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Node.js 20.12 or newer** (uses the built-in `fetch`, Web Streams, `crypto.randomUUID` and `process.loadEnvFile`).
+- **Node.js 22.13 or newer**. The server uses the built-in `fetch`, Web Streams and `process.loadEnvFile`; the PDF library `pdfjs-dist` 6 requires Node.js ≥ 22.13.
 - An API key for at least one provider:
   - Clean APIs: keys look like `cc_` + 48 characters. See <https://cleanapis.com/docs/authentication>.
   - OpenRouter: keys look like `sk-or-...`. Create one at <https://openrouter.ai/keys>.
@@ -16,9 +16,13 @@ cd webchatapi
 npm ci --omit=dev
 ```
 
-The only runtime dependencies are three browser libraries served locally to the UI:
-`marked` (Markdown), `dompurify` (HTML sanitising) and `@highlightjs/cdn-assets`
-(code highlighting). The server itself uses only Node.js built-ins.
+Runtime dependencies:
+
+- Browser libraries served locally to the UI: `marked` (Markdown), `dompurify` (HTML
+  sanitising), `@highlightjs/cdn-assets` (code highlighting).
+- Server-side text extraction for uploads: `pdfjs-dist` (PDF) and `mammoth` (DOCX).
+
+Everything else uses Node.js built-ins.
 
 ## 2. Set the PIN
 
@@ -67,7 +71,7 @@ Rules:
   `.env`, relative to the project root, not to the current directory).
 - Variables already set in the shell or by the host **override** values in `.env`.
 - A missing `.env` is not an error.
-- Loading uses Node's built-in `process.loadEnvFile` (Node.js ≥ 20.12). On startup the
+- Loading uses Node's built-in `process.loadEnvFile`. On startup the
   log shows `Loaded environment variables from …/.env` when the file was read.
 
 Alternatively, set them as environment variables in the shell (names are configured per
@@ -138,7 +142,8 @@ because each session token carries a keyed fingerprint of the PIN credential.
 
 Everything worth keeping is in two places:
 
-- `data/` (or `WCA_DATA_DIR`): `index.json` + `conversations/<uuid>.json`
+- `data/` (or `WCA_DATA_DIR`): `index.json`, `conversations/`, `uploads/`, `memory.json`,
+  `characters.json`
 - the secrets file
 
 Copy them while the server is running; writes are atomic (temp file + rename), so a copy

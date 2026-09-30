@@ -7,6 +7,7 @@ in the source.
 |------|---------|---------|
 | `config/config.json` | Server, auth, chat, UI and provider settings | yes |
 | `config/i18n/<lang>.json` | All UI text, server log lines, CLI messages | yes |
+| `config/prompts.json` | All text sent **to models** by the app (memory block, memory-extraction instruction, file wrapper) | yes |
 | `config/secrets.json` | PIN hash, session secret, optional API keys | **no** (git-ignored) |
 | `config/secrets.example.json` | Template for the secrets file | yes |
 | `.env` | Environment variables (API keys, `PORT`, PIN) for `npm start` and `docker compose` | **no** |
@@ -32,7 +33,7 @@ in the source.
 | `port` / `portEnv` | `3000` / `"PORT"` | Listen port; the env var overrides it. |
 | `trustedProxyHops` | `1` | Number of reverse proxies in front of the app. Controls how the client IP (for login rate limiting) and HTTPS detection are derived from `X-Forwarded-For` / `X-Forwarded-Proto`. **Set to `0` when the app is exposed directly**, otherwise a client could spoof its IP. See [security.md](security.md#client-ip-and-proxies). |
 | `sseKeepAliveSeconds` | `15` | Interval of `: ping` comments on the chat stream so proxies do not close idle connections. |
-| `maxJsonBodyBytes` | `26214400` (25 MB) | Maximum request body. Must be large enough for images (base64 adds about 33 %). |
+| `maxJsonBodyBytes` | `2097152` (2 MB) | Maximum JSON request body. File uploads are raw bodies with their own limits (`attachments.kinds.*.maxBytes`). |
 | `publicDir` | `"public"` | Static UI files. |
 | `dataDir` / `dataDirEnv` | `"data"` / `"WCA_DATA_DIR"` | Conversation storage; the env var overrides it (the Docker image uses `/data`). |
 | `vendorFiles` | map | URL path → file in `node_modules` for the browser libraries. |
@@ -89,9 +90,56 @@ Secrets file format:
 | `reasoningEfforts` | `["", "low", "medium", "high"]` | Options for `reasoning_effort` (`""` = not sent). Labels come from `ui.settings.effort.*`. |
 | `titleMaxLength` | `60` | Length of the auto-generated chat title (first user message). |
 | `upstreamTimeoutSeconds` | `3600` | Hard limit per streamed answer. |
-| `maxImageBytes` | `5242880` | Maximum size per image (5 MB). |
-| `maxImagesPerMessage` | `4` | Maximum images per message. |
-| `allowedImageTypes` | png, jpeg, webp, gif | Accepted MIME types. |
+
+## `attachments`
+
+See [features.md](features.md#file-uploads) for behaviour.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `maxFilesPerMessage` | `6` | Files per message. |
+| `maxTextChars` | `200000` | Maximum extracted text per document; longer text is cut and marked as truncated. |
+| `maxPdfPages` | `300` | Pages read from a PDF. |
+| `orphanUploadHours` | `24` | Uploads never attached to a sent message are deleted after this time. |
+| `cleanupIntervalMinutes` | `60` | How often the cleanup runs (it also runs at start-up). |
+| `kinds.<kind>.extensions` | see file | File extensions of this kind. Extension is checked first, then MIME type. |
+| `kinds.<kind>.mimeTypes` | see file | Accepted MIME types. For `image` and `video` the browser-reported type **must** be listed, because it is sent to the provider. |
+| `kinds.<kind>.maxBytes` | image 5 MB, video 50 MB, pdf/docx 20 MB, text 2 MB | Size limit per file. |
+| `kinds.<kind>.upstreamMime` | video: `video/quicktime` → `video/mov` | Rewrites the MIME type in the data URL sent to the provider (OpenRouter documents `video/mov`). |
+
+Kinds: `image`, `video` (sent as binary), `pdf`, `docx`, `text` (sent as extracted text).
+Removing a kind disables it; adding extensions to `text` enables more source-code formats.
+
+## `memory`
+
+See [features.md](features.md#long-term-memory).
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enabled` | `true` | Global switch for memory injection and extraction. |
+| `defaultOnForNewChats` | `true` | Default of the per-chat memory switch (characters have their own default). |
+| `maxItems` | `200` | Maximum stored facts; automatic extraction stops when reached. |
+| `maxItemChars` | `500` | Maximum length of one fact. |
+| `autoExtract.enabled` | `true` | Extract facts automatically after each answer (one extra API call). |
+| `autoExtract.providerId` / `modelId` | `null` / `null` | Model for extraction. Both `null` = the chat's model. |
+| `autoExtract.maxTokens` / `temperature` | `null` / `null` | Sent only when set (some reasoning models reject `temperature`). |
+| `autoExtract.timeoutSeconds` | `60` | Abort extraction after this time. |
+| `autoExtract.maxAddPerTurn` | `3` | Maximum new facts per answer. |
+| `autoExtract.maxContextChars` | `4000` | Characters of the user message and of the reply sent to the extractor. |
+
+## `characters`
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `maxCount` | `100` | Maximum number of characters. |
+| `nameMaxLength` / `avatarMaxLength` / `descriptionMaxLength` | `80` / `8` / `300` | Field limits. |
+| `defaultAvatar` | `"🤖"` | Emoji for new characters and the “Default assistant” chip. |
+
+## `prompts`
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `file` | `"config/prompts.json"` | File with the model-facing templates. `{placeholders}` are filled at runtime; keep them when editing. `npm run check` verifies that the required placeholders are present. |
 
 ## `ui`
 
@@ -125,11 +173,13 @@ and vLLM.
 | `extraBody` | Merged into every chat request body, e.g. `{"include_reasoning": true}` or provider routing options. Values set by the app (model, messages, stream, temperature, …) take precedence. |
 | `supportsReasoningEffort` | Show the reasoning-effort setting and send `reasoning_effort`. |
 | `minMaxTokens` | Lower bound applied to `max_tokens` when it is sent (Clean APIs enforces 2048 for reasoning models). |
+| `maxRequestBytes` | Maximum size of one chat request in bytes (Clean APIs documents 8 MB: `8000000`). Larger requests are rejected before sending, with a clear message. `null` = no check. |
 | `modelsCacheMinutes` | How long the model list is cached on the server. The picker's **Refresh** button bypasses the cache. |
 | `modelFilter` | `{ "field": "<dot.path>", "allow": [...] }`. Keeps models whose field equals, or for arrays contains, an allowed value. Models without the field are kept. `null` = no filter. |
 | `modelFields` | Dot paths that map the provider's model object to the internal shape: `id`, `name`, `description`, `contextLength`, `inputPrice`, `outputPrice`, `capabilities` (array), `inputModalities` (array or `null`). |
 | `priceUnitTokens` | How many tokens the provider's price refers to (Clean APIs: `1000`; OpenRouter: `1`). Negative or missing prices are shown as “–”. |
 | `visionCapability` | Value in `capabilities` that marks image input (Clean APIs: `"vision"`). Models whose `inputModalities` contains `"image"` are also marked. |
+| `videoCapability` | Same for video input. Models whose `inputModalities` contains `"video"` (OpenRouter) are marked automatically. |
 | `reasoningFields` | Fields of a streamed `delta` holding reasoning text, checked in order. |
 | `staticModels` | Extra model objects (in the provider's own format) appended to the fetched list, for models the `/models` endpoint does not list. |
 

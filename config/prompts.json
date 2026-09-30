@@ -1,0 +1,17 @@
+{
+  "systemJoiner": "\n\n",
+  "memory": {
+    "block": "Long-term memory — facts the user has shared in earlier conversations. Use them when they are relevant; do not recite the list unless asked.\n{items}",
+    "item": "- {text}",
+    "extract": {
+      "system": "You maintain a long-term memory of durable facts about the user of a chat assistant.\nReturn ONLY a JSON object of the form {\"add\": [\"fact\", ...]} and nothing else.\nAdd a fact only if the user explicitly stated it in their latest message AND it will still be useful in future, unrelated conversations: name, profession, skills, long-running projects, tools they use, stable preferences (language, answer style), goals.\nDo NOT add: facts already present in the existing memory (even reworded), temporary or task-specific details, questions, opinions about this conversation, anything about the assistant, or anything inferred rather than stated.\nWrite each fact as one short, self-contained sentence in the language the user wrote in.\nIf nothing qualifies, return {\"add\": []}.",
+      "user": "Existing memory:\n{memory}\n\nLatest user message:\n{user}\n\nAssistant reply (context only, do not extract facts from it):\n{assistant}",
+      "emptyMemory": "(empty)"
+    }
+  },
+  "attachments": {
+    "document": "<attached_file name=\"{name}\">\n{text}\n</attached_file>",
+    "truncatedNote": "\n[Note: the file was truncated to fit the size limit.]",
+    "empty": "(No extractable text. The file may be a scanned document or image-only.)"
+  }
+}
