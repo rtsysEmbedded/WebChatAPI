@@ -98,7 +98,20 @@ async function main() {
   assert.ok(prompts.memory.extract.item.includes('{n}') && prompts.memory.extract.line.includes('{text}'));
 
   // Memory extraction answers: plain, fenced, and wrapped in prose.
-  const { parseJsonObject } = require('../context');
+  const { parseJsonObject, backgroundModel } = require('../context');
+
+  // Background tasks fall back to the chat's own model when the configured
+  // provider has no API key.
+  {
+    const chat = { providerId: 'openrouter', modelId: 'chat-model' };
+    const cfg = { providerId: 'cleanapis', modelId: 'cheap-model' };
+    const withBoth = backgroundModel(cfg, chat, { cleanapis: 'k1', openrouter: 'k2' });
+    assert.deepStrictEqual([withBoth.p.id, withBoth.modelId], ['cleanapis', 'cheap-model']);
+    const onlyOpenRouter = backgroundModel(cfg, chat, { cleanapis: null, openrouter: 'k2' });
+    assert.deepStrictEqual([onlyOpenRouter.p.id, onlyOpenRouter.modelId], ['openrouter', 'chat-model']);
+    const unset = backgroundModel({ providerId: null, modelId: null }, chat, { openrouter: 'k2' });
+    assert.deepStrictEqual([unset.p.id, unset.modelId], ['openrouter', 'chat-model']);
+  }
   assert.deepStrictEqual(parseJsonObject('{"add":["a"],"remove":[]}'), { add: ['a'], remove: [] });
   assert.deepStrictEqual(parseJsonObject('```json\n{"add":["b"]}\n```'), { add: ['b'] });
   assert.deepStrictEqual(parseJsonObject('Sure {x} here: {"add":["c"],"remove":[2]} done.'), { add: ['c'], remove: [2] });

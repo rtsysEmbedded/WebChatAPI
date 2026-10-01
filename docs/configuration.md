@@ -131,7 +131,7 @@ See [features.md](features.md#long-term-memory).
 | `maxItems` | `200` | Maximum stored facts; automatic extraction stops when reached. |
 | `maxItemChars` | `500` | Maximum length of one fact. |
 | `autoExtract.enabled` | `true` | Extract facts automatically after each answer (one extra API call). |
-| `autoExtract.providerId` / `modelId` | `"cleanapis"` / `"deepseek-v4-flash-0731"` | Model for extraction. Both `null` = the chat's model. |
+| `autoExtract.providerId` / `modelId` | `"cleanapis"` / `"deepseek-v4-flash-0731"` | Model for extraction. Both `null` = the chat's model. If the configured provider has no API key (e.g. you only use OpenRouter), the chat's own provider and model are used instead. |
 | `autoExtract.maxTokens` / `temperature` | `null` / `null` | Sent only when set (some reasoning models reject `temperature`). |
 | `autoExtract.timeoutSeconds` | `60` | Abort extraction after this time. |
 | `autoExtract.maxAddPerTurn` | `5` | Maximum new facts per answer. |
@@ -148,7 +148,7 @@ See [features.md](features.md#archive-remember-this--summary-of-the-whole-conver
 | `enabled` | `true` | Enables the SQLite archive of conversation summaries. |
 | `dbFile` | `"memory.db"` | File name inside the data directory. |
 | `summarizeOnRemember` | `true` | Summarize the whole chat when the user explicitly asks to remember it. |
-| `summarizer.providerId` / `modelId` | `"cleanapis"` / `"deepseek-v4-flash-0731"` | Model that writes summaries; `null` = the chat's model. |
+| `summarizer.providerId` / `modelId` | `"cleanapis"` / `"deepseek-v4-flash-0731"` | Model that writes summaries; `null` = the chat's model. Also used when the configured provider has no API key. |
 | `summarizer.maxTokens` / `temperature` / `timeoutSeconds` | `null` / `null` / `120` | Request settings for summaries. |
 | `maxTranscriptChars` | `60000` | Maximum transcript length sent to the summarizer (newest messages kept). |
 | `embedding.providerId` / `modelId` | `null` / `null` | Embedding model for vector search. `null` = keyword search only. Clean APIs' public model list currently contains no embedding models. |
