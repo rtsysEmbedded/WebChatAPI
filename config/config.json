@@ -394,6 +394,28 @@
   },
   "settingsPanel": {
     "file": "settings.json",
+    "providerFields": [
+      { "id": "apiKey", "type": "secret", "maxLength": 500 },
+      { "id": "name", "type": "text", "lines": 1, "maxLength": 60, "pattern": "\\S" },
+      { "id": "baseUrl", "type": "text", "lines": 1, "maxLength": 300, "pattern": "^https?://\\S+$" },
+      { "id": "chatPath", "type": "text", "lines": 1, "maxLength": 200, "pattern": "^/\\S*$", "advanced": true },
+      { "id": "modelsPath", "type": "text", "lines": 1, "maxLength": 200, "pattern": "^/\\S*$", "advanced": true },
+      { "id": "embeddingsPath", "type": "text", "lines": 1, "maxLength": 200, "pattern": "^/\\S*$", "advanced": true },
+      { "id": "headers", "type": "json", "jsonType": "object", "valuesType": "string", "maxLength": 5000, "advanced": true },
+      { "id": "extraBody", "type": "json", "jsonType": "object", "maxLength": 5000, "advanced": true },
+      { "id": "supportsReasoningEffort", "type": "boolean", "advanced": true },
+      { "id": "minMaxTokens", "type": "number", "nullable": true, "integer": true, "min": 1, "max": 1000000, "step": 1, "advanced": true },
+      { "id": "maxRequestBytes", "type": "number", "nullable": true, "integer": true, "min": 1000, "max": 1000000000, "step": 1, "advanced": true },
+      { "id": "modelsCacheMinutes", "type": "number", "integer": true, "min": 0, "max": 10080, "step": 1, "advanced": true },
+      { "id": "priceUnitTokens", "type": "number", "integer": true, "min": 1, "max": 1000000000, "step": 1, "advanced": true },
+      { "id": "visionCapability", "type": "text", "lines": 1, "nullable": true, "maxLength": 100, "advanced": true },
+      { "id": "videoCapability", "type": "text", "lines": 1, "nullable": true, "maxLength": 100, "advanced": true },
+      { "id": "reasoningFields", "type": "json", "jsonType": "array", "maxLength": 2000, "advanced": true },
+      { "id": "modelFilter", "type": "json", "jsonType": "object", "nullable": true, "maxLength": 5000, "advanced": true },
+      { "id": "embeddingModels", "type": "json", "jsonType": "object", "maxLength": 5000, "advanced": true },
+      { "id": "modelFields", "type": "json", "jsonType": "object", "maxLength": 5000, "advanced": true },
+      { "id": "staticModels", "type": "json", "jsonType": "array", "maxLength": 50000, "advanced": true }
+    ],
     "sections": [
       {
         "id": "chat",

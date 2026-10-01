@@ -74,11 +74,23 @@ function loadSecretsFile() {
 
 function saveSecretsFile(data) {
   fs.mkdirSync(path.dirname(secretsFile), { recursive: true });
-  fs.writeFileSync(secretsFile, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
+  const tmp = `${secretsFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
+  fs.renameSync(tmp, secretsFile);
 }
 
-// Secrets are resolved in this order: environment variable, then secrets file.
-// Environment variables are the natural fit for free PaaS hosts.
+// Store (or, with null, remove) a provider API key entered in the settings panel.
+function saveProviderKey(providerId, apiKey) {
+  const file = loadSecretsFile();
+  const providers = { ...(file.providers || {}) };
+  if (apiKey) providers[providerId] = { ...providers[providerId], apiKey };
+  else delete providers[providerId];
+  saveSecretsFile({ ...file, providers });
+}
+
+// Provider API keys: a key saved from the settings panel (secrets file) wins over
+// the environment variable, so the panel can override a key from .env. All other
+// secrets resolve environment variable first, then secrets file.
 function loadSecrets() {
   const file = loadSecretsFile();
   const env = config.secrets.env;
@@ -90,7 +102,7 @@ function loadSecrets() {
   };
   for (const p of config.providers) {
     s.providerKeys[p.id] =
-      process.env[p.apiKeyEnv] || (file.providers && file.providers[p.id] && file.providers[p.id].apiKey) || null;
+      (file.providers && file.providers[p.id] && file.providers[p.id].apiKey) || process.env[p.apiKeyEnv] || null;
   }
   if (!s.sessionSecret && config.secrets.autoGenerateSessionSecret) {
     s.sessionSecret = crypto.randomBytes(32).toString('hex');
@@ -121,5 +133,6 @@ module.exports = {
   secretsFile,
   loadSecretsFile,
   saveSecretsFile,
+  saveProviderKey,
   loadSecrets,
 };

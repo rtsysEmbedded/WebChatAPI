@@ -120,18 +120,43 @@ async function main() {
   assert.strictEqual(new Set(fieldIds).size, fieldIds.length);
   const getPath = (o, p) => p.split('.').reduce((x, k) => (x == null ? undefined : x[k]), o);
   for (const f of settings.fields) {
-    const ps = f.type === 'model' ? [f.providerPath, f.modelPath] : [f.path];
-    for (const p of ps) assert.notStrictEqual(getPath(config, p), undefined, `missing config path ${p}`);
+    const ps = f.type === 'model' ? [f.providerPath, f.modelPath] : f.type === 'secret' ? [] : [f.path];
+    for (const p of ps) {
+      const cfgPath = p.replace(/^providers\.([^.]+)\./, (m, id) => `providers.${config.providers.findIndex((x) => x.id === id)}.`);
+      assert.notStrictEqual(getPath(config, cfgPath), undefined, `missing config path ${p}`);
+    }
     for (const [lang, data] of Object.entries(i18n)) {
-      assert.ok(data.ui.panel.fields[f.id], `${lang}: missing ui.panel.fields.${f.id}`);
+      const label = (f.labelKey || f.id).split('.').reduce((x, k) => (x == null ? undefined : x[k]), data.ui.panel.fields);
+      assert.ok(label, `${lang}: missing ui.panel.fields.${f.labelKey || f.id}`);
       if (f.type === 'model' && f.allowNone) assert.ok(data.ui.panel.none[f.id], `${lang}: missing ui.panel.none.${f.id}`);
       for (const opt of f.options || []) assert.ok(data.ui.panel.options[f.id][opt], `${lang}: missing option ${f.id}.${opt}`);
     }
   }
   {
     const tmpS = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'wca-settings-'));
-    await settings.init(tmpS);
+    const fakeKey = 'sk-test-0123456789abcdef';
+    await settings.init(tmpS, { providerKeys: { cleanapis: fakeKey } });
     const before = config.memory.archive.retrieval.topK;
+
+    // Provider fields: validation, override by id, defaults restore, key never exposed.
+    const cp = config.providers.find((p) => p.id === 'cleanapis');
+    const baseBefore = cp.baseUrl;
+    await assert.rejects(settings.update({ 'provider.cleanapis.baseUrl': 'ftp://x' }), settings.SettingError);
+    await assert.rejects(settings.update({ 'provider.cleanapis.chatPath': 'no-slash' }), settings.SettingError);
+    await assert.rejects(settings.update({ 'provider.cleanapis.headers': { a: 1 } }), settings.SettingError);
+    await assert.rejects(settings.update({ 'provider.cleanapis.headers': [] }), settings.SettingError);
+    await assert.rejects(settings.update({ 'provider.cleanapis.apiKey': 'has space' }), settings.SettingError);
+    await settings.update({ 'provider.cleanapis.baseUrl': 'https://example.test/v1', 'provider.cleanapis.minMaxTokens': null });
+    assert.strictEqual(cp.baseUrl, 'https://example.test/v1');
+    assert.strictEqual(JSON.parse(require('fs').readFileSync(require('path').join(tmpS, 'settings.json'), 'utf8'))['providers.cleanapis.baseUrl'], 'https://example.test/v1');
+    const exposed = JSON.stringify({ values: settings.values(), schema: settings.schema() });
+    assert.ok(!exposed.includes(fakeKey), 'API key must never be sent to the browser');
+    assert.deepStrictEqual(settings.values()['provider.cleanapis.apiKey'], { configured: true, last4: 'cdef' });
+    const section = settings.schema().find((s) => s.id === 'provider.cleanapis');
+    assert.strictEqual(section.fields.find((f) => f.id === 'provider.cleanapis.baseUrl').default, baseBefore);
+    await settings.reset();
+    assert.strictEqual(cp.baseUrl, baseBefore);
+
     await assert.rejects(settings.update({ topK: 999 }), settings.SettingError);
     await assert.rejects(settings.update({ extractModel: { providerId: 'nope', modelId: 'x' } }), settings.SettingError);
     await assert.rejects(settings.update({ unknownField: 1 }), settings.SettingError);

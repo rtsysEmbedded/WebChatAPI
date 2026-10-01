@@ -18,7 +18,9 @@ Settings that are listed in `settingsPanel` can also be changed **in the UI** (s
 **Settings**) without a restart. They are stored as overrides in
 `<data dir>/settings.json` (`{ "<config.path>": value }`), which is not in git, so
 `git pull` never overwrites them. `config.json` stays the source of the defaults, and
-**Restore defaults** in the panel deletes the overrides.
+**Restore defaults** in the panel deletes the overrides. This includes the provider
+settings (base URL, paths, API key, …); see
+[Provider settings in the panel](#provider-settings-in-the-panel).
 
 ---
 
@@ -174,7 +176,9 @@ list, and labels come from `ui.panel.*` in the language files.
 |------------|-----------|-------|
 | `boolean` | `path` | `true` / `false` |
 | `number` | `path`, `min`, `max`, `step`, `integer?`, `nullable?` | number (or `null` if nullable) |
-| `text` | `path`, `maxLength` | string |
+| `text` | `path`, `maxLength`, `lines?` (`1` = single-line input), `pattern?` (regular expression the value must match), `nullable?` | string (or `null` if nullable and empty) |
+| `json` | `path`, `jsonType` (`object` / `array`), `maxLength`, `valuesType?` (`string`: every object value must be a string), `nullable?` | parsed JSON value |
+| `secret` | `maxLength` (provider fields only) | write-only API key, see below |
 | `select` | `path`, `options` | one of `options` (labels: `ui.panel.options.<id>.<option>`) |
 | `model` | `providerPath`, `modelPath`, `kind` (`chat` / `embedding`), `allowNone` | `{ providerId, modelId }` or `null` (label: `ui.panel.none.<id>`) |
 
@@ -186,6 +190,44 @@ labels. Values are validated on the server before they are applied.
 |-----|---------|-------------|
 | `file` | `"settings.json"` | Override file inside the data directory. |
 | `sections[]` | chat, memory, appearance | `{ id, fields: [...] }`; the section title is `ui.panel.sections.<id>`. |
+| `providerFields[]` | see below | Field template repeated for **every enabled provider**; adds one section per provider, titled with the provider's `name`. |
+
+### Provider settings in the panel
+
+`providerFields` makes the provider entries of `config.providers` editable in the UI:
+API key, `name`, `baseUrl`, the three paths, `headers`, `extraBody`,
+`supportsReasoningEffort`, `minMaxTokens`, `maxRequestBytes`, `modelsCacheMinutes`,
+`priceUnitTokens`, `visionCapability`, `videoCapability`, `reasoningFields`, `modelFilter`,
+`embeddingModels`, `modelFields` and `staticModels`. Fields marked `"advanced": true` are
+collapsed under **Advanced**. The form is pre-filled with the current values, which are the
+`config.json` defaults until you change them; **Fill defaults** puts the `config.json`
+values back into the form (nothing is saved until you press **Save**).
+
+Not editable in the panel: `id` (stored in conversations), `enabled` and `apiKeyEnv`
+(changing them needs a restart). Adding a new provider is done in `config.json`.
+
+- **Storage.** Provider overrides go to `settings.json` under the key
+  `providers.<id>.<field>` (the id, not the array position, so reordering `config.json`
+  does not mix them up). A reset (**Restore defaults**) restores them to `config.json`.
+- **API key.** It is a *secret*, not a setting: it is written to the secrets file
+  (`config/secrets.json`, mode `0600`, written atomically) under `providers.<id>.apiKey`.
+  The server **never sends a key to the browser**; the panel only shows whether a key is set
+  and its last 4 characters (only for keys of at least 12 characters). An empty key field
+  means "unchanged"; **Remove key** deletes the saved key. **Restore defaults** does not touch keys.
+- **Precedence of the key.** A key saved from the panel (secrets file) wins over the
+  environment variable (`apiKeyEnv`, e.g. from `.env`). After you remove the saved key, the
+  environment variable is used again. Other secrets (PIN, session secret) still prefer
+  environment variables.
+- **Save and test.** The button saves the form, then requests the provider's model list
+  (`GET <baseUrl><modelsPath>`) and reports how many chat models came back or the
+  provider's error message.
+- **Applied immediately.** The model cache of the provider is cleared; the model picker
+  reloads; if the provider serves the archive's embedding model, un-embedded entries are
+  embedded in the background.
+- **Security.** Anyone who can log in with the PIN can change `baseUrl` and `headers`. A
+  changed `baseUrl` makes the server send the saved API key to that address on the next
+  request, so a PIN holder could point it at a server they control. Protect the PIN as
+  you would protect the keys themselves.
 
 ## `characters`
 
@@ -227,7 +269,7 @@ and vLLM.
 | `name` | Display name. |
 | `enabled` | `false` hides the provider. |
 | `baseUrl` | API root, e.g. `https://cleanapis.com/v1`. |
-| `apiKeyEnv` | Env var holding the key (alternatively `providers.<id>.apiKey` in the secrets file). |
+| `apiKeyEnv` | Env var holding the key. A key saved in the settings panel (or `providers.<id>.apiKey` in the secrets file) takes precedence over it. |
 | `modelsPath` / `chatPath` / `embeddingsPath` | Usually `/models`, `/chat/completions` and `/embeddings`. |
 | `embeddingModels` | `{ path, filter }`: where to list embedding models for the panel. Clean APIs: `/models` filtered on `type = embedding`. OpenRouter: `/embeddings/models`. |
 | `headers` | Extra request headers. OpenRouter uses `X-Title` (and optionally `HTTP-Referer`) for app attribution. |
