@@ -183,13 +183,21 @@ function transcript(conversation) {
   return (omitted ? fill(P.memory.summary.omitted, { count: omitted }) + '\n\n' : '') + kept.join('\n\n');
 }
 
+// The model configured for a background task (fact extraction, summaries) when
+// its provider has an API key; otherwise the conversation's own provider and
+// model, so a missing key for the configured provider never breaks the task.
+function backgroundModel(cfg, conversation, providerKeys) {
+  const own = cfg.providerId && cfg.modelId ? getProvider(cfg.providerId) : null;
+  if (own && providerKeys[own.id]) return { p: own, modelId: cfg.modelId };
+  return { p: getProvider(conversation.providerId), modelId: conversation.modelId };
+}
+
 // Summarize the whole conversation into one archive entry (replacing an
 // earlier summary of the same conversation). Throws on failure.
 async function summarizeConversation(conversation, providerKeys) {
   if (!archive.enabled()) throw new Error(t('server.errors.archiveDisabled'));
   const S = config.memory.archive.summarizer;
-  const useOwn = S.providerId && S.modelId;
-  const p = getProvider(useOwn ? S.providerId : conversation.providerId);
+  const { p, modelId } = backgroundModel(S, conversation, providerKeys);
   const key = p && providerKeys[p.id];
   if (!key) throw new Error(t('server.errors.providerKeyMissing', { provider: p ? p.name : '-' }));
 
@@ -204,7 +212,7 @@ async function summarizeConversation(conversation, providerKeys) {
       }),
     },
   ];
-  const settings = { modelId: useOwn ? S.modelId : conversation.modelId, temperature: S.temperature, maxTokens: S.maxTokens, reasoningEffort: '' };
+  const settings = { modelId, temperature: S.temperature, maxTokens: S.maxTokens, reasoningEffort: '' };
   const json = serializeBody(p, buildBody(p, settings, messages, false));
   const answer = await complete(p, key, json, AbortSignal.timeout(S.timeoutSeconds * 1000));
   const parsed = parseJsonObject(answer, ['title', 'summary']);
@@ -222,8 +230,7 @@ async function extractMemory(conversation, providerKeys) {
   const result = { added: [], removed: [], saved: null, error: null };
   if (!memoryActive(conversation) || !cfg.enabled) return result;
 
-  const useOwn = cfg.providerId && cfg.modelId;
-  const p = getProvider(useOwn ? cfg.providerId : conversation.providerId);
+  const { p, modelId } = backgroundModel(cfg, conversation, providerKeys);
   const key = p && providerKeys[p.id];
   if (!key) return result;
 
@@ -242,7 +249,7 @@ async function extractMemory(conversation, providerKeys) {
     },
   ];
   const settings = {
-    modelId: useOwn ? cfg.modelId : conversation.modelId,
+    modelId,
     temperature: cfg.temperature,
     maxTokens: cfg.maxTokens,
     reasoningEffort: '',
@@ -292,4 +299,4 @@ async function extractMemory(conversation, providerKeys) {
   }
 }
 
-module.exports = { systemPrompt, upstreamMessages, extractMemory, summarizeConversation, parseJsonObject, transcript, TEXT_KINDS };
+module.exports = { systemPrompt, upstreamMessages, extractMemory, summarizeConversation, backgroundModel, parseJsonObject, transcript, TEXT_KINDS };

@@ -40,7 +40,7 @@ config/
   config.json            all settings
   i18n/en.json, fa.json  all text (ui / server.log / server.errors / server.cli)
   prompts.json           all text sent to models (memory block, extraction, file wrapper)
-  secrets.json           (git-ignored) PIN hash, session secret, optional keys
+  secrets.json           (git-ignored) PIN hash, session secret, provider API keys (also written by the settings panel)
 server/
   index.js               bootstrap, routes, chat streaming
   config.js              loads JSON config, translations, secrets; t() and log()
@@ -87,7 +87,8 @@ the UI translates `<code>` via `ui.errors.<code>`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET / PATCH / DELETE | `/api/settings` | `{ sections, values }`. PATCH `{ fieldId: value, … }` validates and applies immediately (`400 invalidSetting` with the field id as `detail`); DELETE restores the `config.json` defaults. |
+| GET / PATCH / DELETE | `/api/settings` | `{ sections, values }`. PATCH `{ fieldId: value, … }` validates and applies immediately (`400 invalidSetting` with the field id as `detail`); DELETE restores the `config.json` defaults. Provider fields use ids `provider.<providerId>.<field>`; the API key field is write-only (PATCH `string` sets, `null` removes; GET returns `{ configured, last4 }`, never the key). |
+| POST | `/api/providers/:id/test` | Requests the provider's model list with the saved key and base URL. `{ ok: true, count }` or `{ ok: false, error }` (`400 providerKeyMissing` if no key is set). |
 | GET | `/api/models[?refresh=1][&kind=embedding]` | `[{ providerId, providerName, models: Model[], error?, detail? }]` |
 | GET | `/api/conversations` | Summaries, pinned first, then newest first. |
 | POST | `/api/conversations` | Create. Body: `providerId`, `modelId` (required), `systemPrompt`, `temperature`, `maxTokens`, `reasoningEffort`. |

@@ -190,9 +190,14 @@ async function complete(p, apiKey, json, signal) {
   return (msg && typeof msg.content === 'string' && msg.content) || '';
 }
 
+function clearModelCache(providerId) {
+  for (const key of [...modelCache.keys()]) if (key.startsWith(`${providerId}:`)) modelCache.delete(key);
+}
+
 module.exports = {
   providers,
   getProvider,
+  clearModelCache,
   listModels,
   buildBody,
   serializeBody,
