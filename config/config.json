@@ -54,6 +54,7 @@
     "pinPattern": "^[0-9]+$",
     "sessionCookieName": "wca_session",
     "sessionTtlHours": 168,
+    "sessionRenewAfterHours": 24,
     "secureCookie": "auto",
     "maxFailedAttemptsPerIp": 5,
     "maxFailedAttemptsGlobal": 30,

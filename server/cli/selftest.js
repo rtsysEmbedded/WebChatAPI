@@ -45,6 +45,17 @@ async function main() {
   assert.ok(!auth.verifyToken(token.slice(0, -2) + 'aa', secrets));
   assert.ok(!auth.verifyToken(token, { ...secrets, pinHash: await auth.hashPin('999999') }));
 
+  // Sliding expiry: a fresh token needs no renewal, an old one does.
+  assert.ok(!auth.needsRenewal(token));
+  const realNow = Date.now;
+  Date.now = () => realNow() + (config.auth.sessionRenewAfterHours + 1) * 3600e3;
+  try {
+    assert.ok(auth.needsRenewal(token));
+    assert.ok(auth.verifyToken(token, secrets));
+  } finally {
+    Date.now = realNow;
+  }
+
   // Model normalisation for both provider shapes.
   const clean = config.providers.find((p) => p.id === 'cleanapis');
   const m1 = normalizeModel(clean, {

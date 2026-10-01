@@ -55,7 +55,8 @@ Settings that are listed in `settingsPanel` can also be changed **in the UI** (s
 | `pinMinLength` / `pinMaxLength` | `4` / `32` | Accepted PIN length. |
 | `pinPattern` | `"^[0-9]+$"` | Regular expression the PIN must match. Change to e.g. `"^.+$"` to allow passphrases. |
 | `sessionCookieName` | `"wca_session"` | Name of the session cookie. |
-| `sessionTtlHours` | `168` | Session lifetime (7 days). |
+| `sessionTtlHours` | `168` | Session lifetime (7 days), counted from the last renewal. |
+| `sessionRenewAfterHours` | `24` | Sliding expiry: an authenticated API request made when the session cookie is older than this gets a fresh cookie with a new `sessionTtlHours` lifetime. An active user therefore stays logged in; an idle one expires after `sessionTtlHours`. `0` disables renewal. |
 | `secureCookie` | `"auto"` | `"auto"`: set the `Secure` flag when the request arrived over HTTPS (directly or via a trusted proxy). `true` / `false` force it. |
 | `maxFailedAttemptsPerIp` | `5` | Failed logins per IP within the window before that IP is locked. |
 | `maxFailedAttemptsGlobal` | `30` | Failed logins from **all** IPs within the window before login is locked for everyone. Protects against distributed guessing. |

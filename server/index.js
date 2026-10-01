@@ -367,6 +367,9 @@ async function route(req, res) {
   }
 
   if (!isAuthenticated(req)) throw new H.HttpError(401, 'unauthorized');
+  if (A.enabled && auth.needsRenewal(H.parseCookies(req)[A.sessionCookieName])) {
+    res.setHeader('Set-Cookie', cookie(req, auth.createToken(secrets), A.sessionTtlHours * 3600));
+  }
 
   if (method === 'GET' && path === '/api/models') return models(req, res, url);
   if (method === 'GET' && path === '/api/conversations') return H.sendJson(res, 200, storage.list());
