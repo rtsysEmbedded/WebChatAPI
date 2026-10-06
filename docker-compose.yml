@@ -1,13 +1,34 @@
 services:
   webchatapi:
-    build: .
+    build:
+      context: .
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+    image: webchatapi:latest
+    init: true
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Localhost only by default: the PIN travels in clear text unless HTTPS is
+      # terminated in front. Set WCA_BIND=0.0.0.0 in .env to publish on all interfaces.
+      - "${WCA_BIND:-127.0.0.1}:${WCA_PORT:-3000}:3000"
+    # .env is optional: API keys can also be entered in the app (Settings).
+    # Needs Docker Compose >= 2.24 for "required: false".
     env_file:
-      - .env
+      - path: .env
+        required: false
+    environment:
+      # Fixed inside the container so a PORT/HOST in .env cannot break the port mapping.
+      PORT: "3000"
+      HOST: 0.0.0.0
     volumes:
       - webchatapi-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   webchatapi-data:

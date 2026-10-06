@@ -48,9 +48,13 @@ npm start                             # http://localhost:3000
 With Docker:
 
 ```bash
-cp .env.example .env    # fill in keys and WCA_PIN
+cp .env.example .env    # set WCA_PIN (API keys can also be entered in the app later)
 docker compose up -d --build
+# open http://localhost:3000
 ```
+
+Details (PIN without `.env`, exposing the port, backups, upgrades):
+[docs/deployment.md](docs/deployment.md#option-b--docker-compose).
 
 ## Documentation
 
