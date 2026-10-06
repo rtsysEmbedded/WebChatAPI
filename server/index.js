@@ -4,7 +4,7 @@ const http = require('http');
 const { config, i18n, log, loadSecrets } = require('./config');
 const auth = require('./auth');
 const storage = require('./storage');
-const { providers, getProvider, listModels, buildBody, serializeBody, streamChat } = require('./providers');
+const { providers, getProvider, listModels, clearModelCache, buildBody, serializeBody, streamChat } = require('./providers');
 const context = require('./context');
 const archive = require('./archive');
 const settings = require('./settings');
@@ -367,6 +367,9 @@ async function route(req, res) {
   }
 
   if (!isAuthenticated(req)) throw new H.HttpError(401, 'unauthorized');
+  if (A.enabled && auth.needsRenewal(H.parseCookies(req)[A.sessionCookieName])) {
+    res.setHeader('Set-Cookie', cookie(req, auth.createToken(secrets), A.sessionTtlHours * 3600));
+  }
 
   if (method === 'GET' && path === '/api/models') return models(req, res, url);
   if (method === 'GET' && path === '/api/conversations') return H.sendJson(res, 200, storage.list());
@@ -376,6 +379,17 @@ async function route(req, res) {
   const up = /^\/api\/uploads\/([^/]+)$/.exec(path);
   if (up && method === 'GET') return features.serveUpload(req, res, up[1]);
   if (up && method === 'DELETE') return features.deleteUpload(res, up[1]);
+
+  const providerTest = /^\/api\/providers\/([^/]+)\/test$/.exec(path);
+  if (providerTest && method === 'POST') {
+    const { p, key } = requireProvider(decodeURIComponent(providerTest[1]));
+    try {
+      const list = await listModels(p, key, true, 'chat');
+      return H.sendJson(res, 200, { ok: true, count: list.length });
+    } catch (err) {
+      return H.sendJson(res, 200, { ok: false, error: err.message });
+    }
+  }
 
   if (path === '/api/settings') {
     if (method === 'GET') return H.sendJson(res, 200, { sections: settings.schema(), values: settings.values() });
@@ -429,10 +443,15 @@ async function route(req, res) {
 
 async function main() {
   await storage.init();
-  await settings.init(storage.dataDir); // apply panel overrides before anything reads config
+  await settings.init(storage.dataDir, secrets); // apply panel overrides before anything reads config
   archive.init(storage.dataDir, secrets.providerKeys);
   settings.onChange((paths) => {
     if (paths.some((p) => p.startsWith('memory.archive.embedding.'))) archive.embeddingChanged();
+    for (const p of providers) {
+      if (paths.some((x) => x.startsWith(`providers.${p.id}.`))) clearModelCache(p.id);
+    }
+    const embedProvider = config.memory.archive.embedding.providerId;
+    if (embedProvider && paths.some((x) => x.startsWith(`providers.${embedProvider}.`))) archive.reindex();
   });
   await storage.uploads.cleanup();
   setInterval(() => storage.uploads.cleanup().catch(() => {}), config.attachments.cleanupIntervalMinutes * 60e3).unref();

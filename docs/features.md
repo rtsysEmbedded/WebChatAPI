@@ -96,7 +96,8 @@ or press the **bookmark button** in the top bar:
    (title; context; key facts and data with exact names, numbers and versions; decisions;
    open questions), in the language you wrote in. Instruction:
    `prompts.json → memory.summary`. The model is `memory.archive.summarizer`, or the chat's
-   model when that is `null`.
+   model when that is `null` or when its provider has no API key (for example when you
+   only use OpenRouter).
 2. The summary is stored in the archive (`data/memory.db`). Saving the same chat again
    **replaces** its summary instead of adding a duplicate.
 3. The UI shows **“Saved to memory: <title>”**.

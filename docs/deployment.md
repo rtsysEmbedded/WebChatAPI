@@ -135,21 +135,50 @@ for that response.
 
 ## Option B — Docker Compose
 
+Requires Docker Compose ≥ 2.24.
+
 ```bash
 git clone <repository-url> webchatapi && cd webchatapi
-cp .env.example .env         # set the API keys and WCA_PIN (or WCA_PIN_HASH)
+cp .env.example .env         # set WCA_PIN (or WCA_PIN_HASH); API keys are optional here
 docker compose up -d --build
 docker compose logs -f
 ```
 
-- Conversations **and** the secrets file are stored in the named volume `webchatapi-data`
-  (`/data` in the container; `WCA_DATA_DIR` and `WCA_SECRETS_FILE` point there).
-- To set the PIN as a hash instead of via `.env`:
-  `docker compose exec webchatapi npm run set-pin`, then restart.
-- Put Caddy or nginx in front for HTTPS as in Option A, or add a Caddy service to the
-  compose file.
-- The container publishes port 3000 on all interfaces by default. When a proxy on the same
-  host terminates TLS, change the mapping to `"127.0.0.1:3000:3000"`.
+Open `http://localhost:3000`, log in with the PIN, then enter the API keys under
+**Settings → provider → API key → Save and test** if they are not in `.env`.
+
+**Without a `.env` file** the container still starts (`.env` is optional). Set the PIN
+afterwards (the server reads it at start-up, so restart once):
+
+```bash
+echo 1234 | docker compose exec -T webchatapi npm run set-pin    # or run it interactively without echo
+docker compose restart
+```
+
+- **Data.** Conversations, uploads, memory, `settings.json` and `secrets.json` (PIN hash,
+  session secret, API keys saved in the panel) are stored in the named volume
+  `webchatapi-data` (`/data` in the container). `docker compose down` keeps it;
+  `docker compose down -v` **deletes it**. Back it up with
+  `docker run --rm -v webchatapi_webchatapi-data:/data -v "$PWD":/backup alpine tar czf /backup/webchatapi-data.tgz -C /data .`
+  (the volume name is prefixed with the compose project name, here the directory name).
+  Stop the container first so `memory.db` is consistent.
+- **Key precedence.** A key saved in the panel wins over the same key in `.env`.
+- **Network.** The port is published on `127.0.0.1` only, because the PIN travels in clear
+  text without HTTPS. Put Caddy or nginx in front for HTTPS as in Option A, or set
+  `WCA_BIND=0.0.0.0` in `.env` to publish on all interfaces (the port on the host is
+  `WCA_PORT`, default 3000). Inside the container, `PORT` and `HOST` are fixed to
+  `3000` / `0.0.0.0`; values of the same name in `.env` are ignored there.
+- **Hardening in the compose file.** Read-only root file system (only `/data` and `/tmp`
+  are writable), all Linux capabilities dropped, `no-new-privileges`, and the process runs
+  as the unprivileged `node` user. If you replace the volume with a bind mount
+  (`./data:/data`), the host directory must be writable by uid 1000 (`chown 1000:1000 data`).
+- **Health check.** The image checks `GET /api/auth/status` every 30 s;
+  `docker compose ps` shows `healthy`.
+- **Image size.** About 400 MB: Node.js on Alpine plus 115 MB of dependencies (63 MB of
+  that is an optional rendering dependency of `pdfjs-dist`).
+- **Docker Hub rate limit.** If the build fails with `429 Too Many Requests` while pulling
+  the base image, use a mirror: `NODE_IMAGE=mirror.gcr.io/library/node:22-alpine` in `.env`
+  (or `docker build --build-arg NODE_IMAGE=...`). The image must be Node.js ≥ 22.13.
 
 ---
 
@@ -178,7 +207,7 @@ Hugging Face Spaces (Docker SDK) expects the app on port **7860**: set the varia
 ## Health check
 
 `GET /api/auth/status` returns `200` with a small JSON body and needs no authentication.
-Use it as the platform's health-check path.
+Use it as the platform's health-check path (the Docker image's `HEALTHCHECK` uses it).
 
 ## Upgrading a deployment
 

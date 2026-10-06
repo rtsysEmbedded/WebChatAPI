@@ -76,6 +76,10 @@ supplied by the client and can be forged, so they are never used.
   HTTPS.
 - Sessions are stateless. Logging out clears the cookie in that browser, but a stolen
   token stays valid until it expires (`sessionTtlHours`) or the PIN or secret changes.
+- Sessions use sliding expiry (`sessionRenewAfterHours`): each token is re-issued while in
+  use, so a stolen token that is kept in use also stays valid. Changing the PIN or the
+  session secret revokes all tokens. Set `sessionRenewAfterHours` to `0` for a fixed
+  lifetime.
 
 ## Cross-site request forgery
 

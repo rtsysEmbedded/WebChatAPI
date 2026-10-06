@@ -84,6 +84,18 @@ function verifyToken(token, secrets) {
   }
 }
 
+// True when a valid token is older than sessionRenewAfterHours, so the caller
+// should issue a fresh one (sliding expiry). 0 disables renewal.
+function needsRenewal(token) {
+  if (!A.sessionRenewAfterHours || !token) return false;
+  try {
+    const data = JSON.parse(Buffer.from(token.split('.')[0], 'base64url').toString());
+    return Date.now() - data.iat > A.sessionRenewAfterHours * 3600e3;
+  } catch {
+    return false;
+  }
+}
+
 // ---- Brute-force protection ----------------------------------------------
 // A PIN has low entropy, so attempts are limited per client IP *and* globally
 // (the global limit defends against attackers rotating IP addresses).
@@ -141,6 +153,7 @@ module.exports = {
   validatePinFormat,
   createToken,
   verifyToken,
+  needsRenewal,
   lockStatus,
   recordFailure,
   recordSuccess,

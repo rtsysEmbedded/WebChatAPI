@@ -2,5 +2,13 @@ node_modules
 data
 config/secrets.json
 .git
+.gitignore
 .env
+.env.*
+!.env.example
 *.log
+docs
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore

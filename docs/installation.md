@@ -83,7 +83,11 @@ export CLEANAPIS_API_KEY=cc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 export OPENROUTER_API_KEY=sk-or-xxxxxxxx
 ```
 
-or in the secrets file (see `config/secrets.example.json`):
+or **in the app**: sidebar → **Settings** → the provider's section → **API key** →
+**Save and test**. The key is stored in the secrets file and takes precedence over the
+environment variable (see [configuration](configuration.md#provider-settings-in-the-panel)).
+
+Or write it in the secrets file by hand (see `config/secrets.example.json`):
 
 ```json
 {
